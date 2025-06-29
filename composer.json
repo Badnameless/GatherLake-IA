@@ -16,6 +16,7 @@
         "openai-php/laravel": "^0.13.0",
         "php-mcp/laravel": "^2.0.0",
         "php-mcp/server": "^2.1.0",
+        "spatie/laravel-permission": "^6.20",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {
