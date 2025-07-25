@@ -15,3 +15,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+use App\Http\Controllers\NL2SQLController;
+
+Route::get('/nl2sql', [NL2SQLController::class, 'create'])->name('nl2sql.create');
+Route::post('/nl2sql', [NL2SQLController::class, 'store'])->name('nl2sql.store');
+
+use App\Http\Controllers\ConnectionController;
+
+Route::resource('connections', ConnectionController::class);

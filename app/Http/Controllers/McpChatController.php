@@ -50,7 +50,6 @@ class McpChatController extends Controller
 
         $toolResult = Mcp::callTool($functionName, $args);
 
-        // Step 5: Respond with tool output
         $secondResponse = OpenAI::client(env('MCP_OPENAI_KEY'))->chat()->create([
             'model' => 'gpt-4o',
             'messages' => [
