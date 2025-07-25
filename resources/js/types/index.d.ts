@@ -41,3 +41,13 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+
+export type Connection = {
+    id: number;
+    name: string;
+    driver: string;
+    host: string;
+    port: string;
+    database: string;
+    username: string;
+};
