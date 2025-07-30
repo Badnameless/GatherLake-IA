@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+@import url('./Header.css');
+@import url('./SideBar.css');
+@import url('./Chat.css');
+:root {
+    color-scheme: dark;
+    --techwave-site-bg-color: #0f0e11;
+    --techwave-header-bg-color: #17151b;
+    --techwave-some-r-bg-color: #17151b;
+    --techwave-some-a-bg-color: #2b2830;
+    --techwave-heading-color: #c0bcca;
+    --techwave-body-color: #7e7a86;
+    --techwave-border-color: #312e37;
+    --techwave-button-bg-color: #1c1925;
+    --techwave-hover-color: #fff;
+    --techwave-heading-font-family: 'Heebo', sans-serif;
+    --techwave-body-font-family: 'Work Sans', sans-serif;
+    --techwave-left-panel-width: 300px;
+    --techwave-header-height: 100px;
+    --techwave-main-color: #7c5fe3;
+    --techwave-main-color1: #8768f8;
+    --techwave-main-color2: #b7a4fb;
+}
+* {
+    /* margin: 0; */
+    /* padding: 0; */
+    font-family: "Heebo", sans-serif;
+    font-optical-sizing: auto;
+    box-sizing: border-box;
+}
+.container {
+    max-width: 1140px;
+    padding: 0px 15px;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+.Content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-areas: "sidebar content";
+}
+.Content__body {
+    padding-top: 62px;
+    grid-area: content;
+    background-color: var(--techwave-site-bg-color);
+}

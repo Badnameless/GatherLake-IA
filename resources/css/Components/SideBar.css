@@ -1,0 +1,115 @@
+.Content__sideBar {
+    position: fixed;
+    top: 100px;
+    min-height: calc(100vh - 100px);
+    width: 300px;
+    border-right: 1px solid var(--techwave-border-color);
+    padding: 48px 20px;
+    overflow-y: auto;
+    height: calc(100% - var(--techwave-header-height));
+    scrollbar-width: thin;
+    scrollbar-color: #999 #fff;
+    background-color: var(--techwave-some-r-bg-color);
+    line-height: 1.5;
+    font-weight: 400;
+    color: var(--techwave-body-color);
+}
+.Content__sideBar--item {
+    margin-bottom: 38px;
+}
+.Content__sideBar--title {
+    margin: 0 0 12px;
+}
+.Content__sideBar--title h2 {
+    padding: 0 10px;
+    text-transform: uppercase;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: .5px;
+    color: var(--techwave-body-color);
+}
+.Content__sideBar--links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.Content__sideBar--links-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    height: 36px;
+    padding: 0px 10px;
+    border-radius: 5px;
+    position: relative;
+    cursor: pointer;
+    transition: .3s ease-in-out;
+}
+.Content__sideBar--links-link:hover {
+    background-color: var(--techwave-some-a-bg-color);
+    transition: .3s ease-in-out;
+}
+.linkActive {
+    background-color: var(--techwave-some-a-bg-color) !important;
+}
+.Content__sideBar--links-link svg {
+    width: 16px;
+    height: 16px;
+}
+.Content__sideBar--links-link span {
+    color: var(--techwave-heading-color);
+    line-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    position: relative;
+}
+.Content__sideBar--links-link span svg {
+    position: absolute;
+    right: 0px;
+    width: 12px;
+    height: 12px;
+    transform: rotate(-90deg);
+}
+.Content__sideBar--links-link span .counter {
+    width: 24px;
+    display: inline-block;
+    height: 24px;
+    background-color: #ab0cdf;
+    color: #fff;
+    font-weight: 500;
+    line-height: 25px;
+    text-align: center;
+    font-size: 11px;
+    border-radius: 100%;
+    vertical-align: top;
+}
+.Content__sideBar--links-link svg path {
+    fill: var(--techwave-heading-color);
+}
+.submenu .Content__sideBar--links-link {
+    padding: 0px 60px;
+    height: 38px;
+}
+.submenu .Content__sideBar--links-link::after {
+    width: 5px;
+    height: 2px;
+    background-color: var(--techwave-heading-color);
+    position: absolute;
+    left: 44px;
+    top: 50%;
+    margin-top: -1px;
+    content: "";
+}
+.submenu .Content__sideBar--links-link span {
+    gap: 0;
+}
+.submenu .Content__sideBar--links-link span p {
+    vertical-align: super;
+    text-transform: uppercase;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: .5px;
+    margin-left: 2px;
+    color: var(--techwave-main-color);
+}
