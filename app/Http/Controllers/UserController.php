@@ -7,9 +7,13 @@ use App\Models\User;
 
 class UserController extends Controller
 {
-    public function get($id)
+    public function fetch(Request $request)
     {
-        $user = User::with('roles')->find($id);
+        $req = $request->validate([
+            'id' => 'numeric|required',
+        ]);
+
+        $user = User::where('id', $req['id'])->with('roles')->first();
 
         return response()->json($user, 200);
     }
@@ -21,16 +25,17 @@ class UserController extends Controller
         return response()->json($user, 200);
     }
 
-    public function update(Request $req, $id)
+    public function update(Request $req)
     {
         $validRequest = $req->validate([
+            'id' => 'numeric|required',
             'name' => 'string|nullable',
             'email' => 'email|nullable',
             'status' => 'string|nullable',
             'role' => 'string|nullable',
         ]);
 
-        $user = User::where('id', $id)->with('roles')->first();
+        $user = User::where('id', $validRequest['id'])->with('roles')->first();
 
         // Update user attributes manually
         $user->name = $validRequest['name'] ?? $user->name;
@@ -48,5 +53,21 @@ class UserController extends Controller
         }
 
         return response()->json($user->load('roles'), 200);
+    }
+
+    public function emailIsTaken(Request $request)
+    {
+        $req = $request->validate([
+            'email' => 'email|required'
+        ]);
+
+        $email = User::where('email', $req['email'])->first();
+
+        if ($email) {
+            return response()->json(true, 200);
+        } else {
+            return response()->json(false, 200);
+
+        }
     }
 }
