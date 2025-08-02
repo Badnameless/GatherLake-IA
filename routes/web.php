@@ -20,6 +20,7 @@ use App\Http\Controllers\NL2SQLController;
 
 Route::get('/nl2sql', [NL2SQLController::class, 'create'])->name('nl2sql.create');
 Route::post('/nl2sql', [NL2SQLController::class, 'store'])->name('nl2sql.store');
+Route::post('/nl2sql/confirm', [NL2SQLController::class, 'confirm'])->name('nl2sql.confirm');
 
 use App\Http\Controllers\ConnectionController;
 
