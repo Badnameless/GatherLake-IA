@@ -11,6 +11,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+
+    Route::prefix('users')->group(function () {
+        // Listado de usuarios (estático)
+        Route::get('/', function () {
+            return Inertia::render('users/index');
+        })->name('users.index');
+        
+        // Detalles de usuario (estático)
+        Route::get('/{id}', function ($id) {
+            return Inertia::render('users/show', [
+                'userId' => $id // Pasamos el ID como prop
+            ]);
+        })->name('users.show');
+        
+        // Edición de usuario (estático)
+        Route::get('/{id}/edit', function ($id) {
+            return Inertia::render('users/edit', [
+                'userId' => $id // Pasamos el ID como prop
+            ]);
+        })->name('users.edit');
+    });
 });
 
 require __DIR__.'/settings.php';
