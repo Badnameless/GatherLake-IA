@@ -139,42 +139,101 @@ export default function Create({ connections, result }: { connections: Connectio
 
                 {/* Confirmation Modal */}
                 <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-                    <DialogContent className="max-w-4xl">
-                        <DialogHeader>
-                            <DialogTitle>
+                    <DialogContent className="w-[80%] max-h-[90vh] overflow-hidden">
+                        <DialogHeader className="border-b border-border pb-4">
+                            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${props.pendingQuery?.type === 'delete' ? 'bg-destructive' : 'bg-primary'}`}></div>
                                 Confirm {props.pendingQuery?.type === 'update' ? 'Update' : 'Delete'} Operation
                             </DialogTitle>
-                            <DialogDescription>
-                                This operation will affect {props.pendingQuery?.affectedCount} record(s). 
-                                Please review the records that will be {props.pendingQuery?.type === 'update' ? 'updated' : 'deleted'}:
+                            <DialogDescription className="text-muted-foreground mt-2">
+                                This operation will affect <span className="font-semibold text-foreground">{props.pendingQuery?.affectedCount}</span> record(s). 
+                                Please review the details below before proceeding.
                             </DialogDescription>
                         </DialogHeader>
                         
-                        <div className="max-h-96 overflow-y-auto">
-                            <div className="mb-4">
-                                <h4 className="font-medium mb-2">SQL Query:</h4>
-                                <code className="block bg-gray-100 p-2 rounded text-sm">
-                                    {props.pendingQuery?.sql}
-                                </code>
+                        <div className="flex-1 overflow-y-auto py-4 space-y-6">
+                            {/* SQL Query Section */}
+                            <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                                <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                    </svg>
+                                    SQL Query
+                                </h4>
+                                <div className="bg-card border border-border rounded-md p-4 overflow-x-auto">
+                                    <code className="text-primary text-sm font-mono whitespace-pre-wrap">
+                                        {props.pendingQuery?.sql}
+                                    </code>
+                                </div>
                             </div>
                             
-                            <div>
-                                <h4 className="font-medium mb-2">Records to be affected:</h4>
-                                <DataTable data={props.pendingQuery?.affectedRecords || []} />
+                            {/* Records Section */}
+                            <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                                <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    Records to be {props.pendingQuery?.type === 'update' ? 'updated' : 'deleted'} ({props.pendingQuery?.affectedCount})
+                                </h4>
+                                <div className="bg-card rounded-md border border-border overflow-hidden">
+                                    <div className="max-h-64 overflow-y-auto">
+                                        <DataTable data={props.pendingQuery?.affectedRecords || []} />
+                                    </div>
+                                </div>
                             </div>
+
+                            {/* Warning Section for Delete */}
+                            {props.pendingQuery?.type === 'delete' && (
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <svg className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <div>
+                                            <h5 className="font-medium text-destructive">Warning</h5>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                This action will permanently delete {props.pendingQuery?.affectedCount} record(s). This operation cannot be undone.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
-                        <DialogFooter>
-                            <Button variant="outline" onClick={cancelQuery} disabled={confirmForm.processing}>
-                                Cancel
-                            </Button>
-                            <Button 
-                                variant={props.pendingQuery?.type === 'delete' ? 'destructive' : 'default'}
-                                onClick={confirmQuery} 
-                                disabled={confirmForm.processing}
-                            >
-                                {confirmForm.processing ? 'Processing...' : `Confirm ${props.pendingQuery?.type === 'update' ? 'Update' : 'Delete'}`}
-                            </Button>
+                        <DialogFooter className="border-t border-border pt-4 bg-muted/30 -mx-6 -mb-6 px-6 py-4">
+                            <div className="flex items-center justify-between w-full">
+                                <div className="text-sm text-muted-foreground">
+                                    {props.pendingQuery?.type === 'update' ? 'Update' : 'Delete'} operation
+                                </div>
+                                <div className="flex gap-3">
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={cancelQuery} 
+                                        disabled={confirmForm.processing}
+                                        className="px-6"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        variant={props.pendingQuery?.type === 'delete' ? 'destructive' : 'default'}
+                                        onClick={confirmQuery} 
+                                        disabled={confirmForm.processing}
+                                        className="px-6"
+                                    >
+                                        {confirmForm.processing ? (
+                                            <div className="flex items-center gap-2">
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Processing...
+                                            </div>
+                                        ) : (
+                                            `Confirm ${props.pendingQuery?.type === 'update' ? 'Update' : 'Delete'}`
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
