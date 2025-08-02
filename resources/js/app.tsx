@@ -9,8 +9,14 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
+import axios from 'axios';
 
 const appName = 'Gatherlake AI';
+
+// Configure axios defaults
+axios.defaults.baseURL = '/';
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.withCredentials = true;
 
 createInertiaApp({
     title: (title) => title ? `${appName} | ${title}` : appName,

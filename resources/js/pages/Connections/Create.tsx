@@ -104,13 +104,14 @@ export default function Create() {
                             </div>
 
                             <div>
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">Password (opcional)</Label>
                                 <Input
                                     type="password"
                                     name="password"
                                     id="password"
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
+                                    placeholder="Dejar vacío si no requiere contraseña"
                                 />
                                 {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                             </div>

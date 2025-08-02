@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Mcp\NL2SQLTool;
 use App\Mcp\ExecutorTool;
+use Illuminate\Support\Facades\DB; // Added DB facade
 
 class NL2SQLController extends Controller
 {
@@ -22,10 +23,18 @@ class NL2SQLController extends Controller
     {
         $request->validate([
             'query' => 'required|string|max:255',
-            'connection_id' => 'required|exists:connections,id',
         ]);
 
-        $connection = Connection::findOrFail($request->input('connection_id'));
+        // Get the active connection for the authenticated user
+        $connection = Connection::getActiveForUser(Auth::id());
+        
+        if (!$connection) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.'], 400);
+            }
+            return back()->with('error', 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.');
+        }
+
         $sql = $nl2sql->generate($connection, $request->input('query'));
         
         // Check if it's an UPDATE or DELETE query that needs confirmation
@@ -33,6 +42,17 @@ class NL2SQLController extends Controller
         if (str_starts_with($trimmedSql, 'update') || str_starts_with($trimmedSql, 'delete')) {
             // Get affected records for confirmation
             $affectedRecords = $executor->getAffectedRecords($sql);
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'pendingQuery' => [
+                        'sql' => $sql,
+                        'type' => str_starts_with($trimmedSql, 'update') ? 'update' : 'delete',
+                        'affectedRecords' => $affectedRecords,
+                        'affectedCount' => count($affectedRecords)
+                    ]
+                ]);
+            }
             
             return Inertia::render('NL2SQL/Create', [
                 'connections' => Auth::user()->connections,
@@ -48,18 +68,74 @@ class NL2SQLController extends Controller
         // Execute SELECT or INSERT directly
         $result = $executor->execute($sql);
 
-        // Check if it's a success response (INSERT/UPDATE/DELETE) or a SELECT result
-        if (is_array($result) && isset($result[0]) && is_array($result[0]) && isset($result[0]['success'])) {
-            $message = 'Query executed successfully.';
-            if (isset($result[0]['affected_rows'])) {
-                $message .= " {$result[0]['affected_rows']} row(s) affected.";
-            }
-            return back()->with('success', $message);
+        // Determine the type of query
+        $queryType = 'select'; // default
+        if (str_starts_with($trimmedSql, 'insert')) {
+            $queryType = 'insert';
+        } elseif (str_starts_with($trimmedSql, 'update')) {
+            $queryType = 'update';
+        } elseif (str_starts_with($trimmedSql, 'delete')) {
+            $queryType = 'delete';
         }
 
+        // Check if it's a success response (INSERT/UPDATE/DELETE) or a SELECT result
+        if (is_array($result) && isset($result[0]) && is_array($result[0]) && isset($result[0]['success'])) {
+            $affectedRows = 0;
+            if (isset($result[0]['affected_rows'])) {
+                $affectedRows = $result[0]['affected_rows'];
+            }
+            
+            // For INSERT operations, get the updated table
+            $updatedData = null;
+            if ($queryType === 'insert') {
+                try {
+                    $updatedData = DB::select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                } catch (\Exception $e) {
+                    // If we can't get the updated table, continue without it
+                    $updatedData = null;
+                }
+            }
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'result' => [
+                        'sql' => $sql,
+                        'data' => $updatedData ?: $result,
+                        'type' => $queryType,
+                        'affected_rows' => $affectedRows
+                    ]
+                ]);
+            }
+            
+            return Inertia::render('NL2SQL/Create', [
+                'connections' => Auth::user()->connections,
+                'result' => [
+                    'sql' => $sql,
+                    'data' => $updatedData ?: $result,
+                    'type' => $queryType,
+                    'affected_rows' => $affectedRows
+                ],
+            ]);
+        }
+
+        // For SELECT queries, return the result with SQL
+        if ($request->wantsJson()) {
+            return response()->json([
+                'result' => [
+                    'sql' => $sql,
+                    'data' => $result,
+                    'type' => 'select'
+                ]
+            ]);
+        }
+        
         return Inertia::render('NL2SQL/Create', [
             'connections' => Auth::user()->connections,
-            'result' => $result,
+            'result' => [
+                'sql' => $sql,
+                'data' => $result,
+                'type' => 'select'
+            ],
         ]);
     }
 
@@ -73,13 +149,35 @@ class NL2SQLController extends Controller
         try {
             $result = $executor->execute($request->input('sql'));
             
-            $message = 'Query executed successfully.';
+            $affectedRows = 0;
             if (isset($result[0]['affected_rows'])) {
-                $message .= " {$result[0]['affected_rows']} row(s) affected.";
+                $affectedRows = $result[0]['affected_rows'];
             }
             
-            return back()->with('success', $message);
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'result' => [
+                        'sql' => $request->input('sql'),
+                        'data' => $result,
+                        'type' => $request->input('type'),
+                        'affected_rows' => $affectedRows
+                    ]
+                ]);
+            }
+            
+            return Inertia::render('NL2SQL/Create', [
+                'connections' => Auth::user()->connections,
+                'result' => [
+                    'sql' => $request->input('sql'),
+                    'data' => $result,
+                    'type' => $request->input('type'),
+                    'affected_rows' => $affectedRows
+                ],
+            ]);
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Error executing query: ' . $e->getMessage()], 500);
+            }
             return back()->with('error', 'Error executing query: ' . $e->getMessage());
         }
     }

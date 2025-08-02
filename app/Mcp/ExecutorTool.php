@@ -25,31 +25,49 @@ class ExecutorTool
             // For now, we'll use the default database connection.
             // In a later phase, we'll add support for dynamic connections.
             return DB::transaction(function () use ($sql) {
-                $trimmedSql = strtolower(trim($sql));
-                if (str_starts_with($trimmedSql, 'select')) {
-                    $this->logger->info('Executing SQL', ['sql' => $sql]);
-                    return DB::select($sql);
+                // Split multiple SQL statements by semicolon
+                $statements = array_filter(
+                    array_map('trim', explode(';', $sql)),
+                    function($stmt) { return !empty($stmt); }
+                );
+
+                $results = [];
+                $totalAffectedRows = 0;
+
+                foreach ($statements as $statement) {
+                    if (empty(trim($statement))) continue;
+
+                    $trimmedSql = strtolower(trim($statement));
+                    
+                    if (str_starts_with($trimmedSql, 'select')) {
+                        $this->logger->info('Executing SELECT SQL', ['sql' => $statement]);
+                        $selectResults = DB::select($statement);
+                        $results = array_merge($results, $selectResults);
+                    } elseif (str_starts_with($trimmedSql, 'insert')) {
+                        $this->logger->info('Executing INSERT SQL', ['sql' => $statement]);
+                        DB::insert($statement);
+                        $totalAffectedRows++;
+                    } elseif (str_starts_with($trimmedSql, 'update')) {
+                        $this->logger->info('Executing UPDATE SQL', ['sql' => $statement]);
+                        $affectedRows = DB::update($statement);
+                        $totalAffectedRows += $affectedRows;
+                    } elseif (str_starts_with($trimmedSql, 'delete')) {
+                        $this->logger->info('Executing DELETE SQL', ['sql' => $statement]);
+                        $affectedRows = DB::delete($statement);
+                        $totalAffectedRows += $affectedRows;
+                    } else {
+                        throw new \Exception('Only SELECT, INSERT, UPDATE and DELETE queries are allowed.');
+                    }
                 }
 
-                if (str_starts_with($trimmedSql, 'insert')) {
-                    $this->logger->info('Executing SQL', ['sql' => $sql]);
-                    DB::insert($sql);
-                    return [['success' => true]];
+                // Return appropriate result based on the type of operations
+                if (empty($results)) {
+                    // No SELECT statements, return success with affected rows
+                    return [['success' => true, 'affected_rows' => $totalAffectedRows]];
+                } else {
+                    // Has SELECT statements, return the results
+                    return $results;
                 }
-
-                if (str_starts_with($trimmedSql, 'update')) {
-                    $this->logger->info('Executing SQL', ['sql' => $sql]);
-                    $affectedRows = DB::update($sql);
-                    return [['success' => true, 'affected_rows' => $affectedRows]];
-                }
-
-                if (str_starts_with($trimmedSql, 'delete')) {
-                    $this->logger->info('Executing SQL', ['sql' => $sql]);
-                    $affectedRows = DB::delete($sql);
-                    return [['success' => true, 'affected_rows' => $affectedRows]];
-                }
-
-                throw new \Exception('Only SELECT, INSERT, UPDATE and DELETE queries are allowed.');
             });
         } catch (\Exception $e) {
             $this->logger->error('Error executing SQL', ['error' => $e->getMessage()]);

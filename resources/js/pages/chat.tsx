@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import { useChat } from '../hooks/useChat';
+import ChatResponse from '../components/chat-response';
 
 function Chat() {
   const {
@@ -12,19 +13,22 @@ function Chat() {
     setEditingTitle,
     showActionModal,
     showProfileModal,
+    isProcessing,
     sendMessage,
     createNewSession,
     switchSession,
-    updateSessionTitle,
     deleteSession,
     showSessionActions,
-    hideSessionActions,
     startEditingSession,
     cancelEditingSession,
     saveSessionTitle,
     toggleProfileModal,
-    handleLogout
+    handleLogout,
+    handleConfirmAction,
+    handleCancelAction
   } = useChat();
+
+  const { userInfo, currentSession, sessions } = chatData;
 
   if (chatData.isLoading) {
     return <div>Loading...</div>;
@@ -32,8 +36,6 @@ function Chat() {
   if (chatData.error) {
     return <div>Error: {chatData.error}</div>;
   }
-
-  const { userInfo, currentSession, sessions } = chatData;
 
   // Utilidad para formatear fecha
   const formatDate = (iso: string) => {
@@ -226,10 +228,21 @@ function Chat() {
                         <path d="M381,255.8c0.1,13.7-11.3,25.2-25.1,25.1c-13.5-0.1-24.8-11.3-24.9-24.8c-0.1-13.7,11.3-25.2,25.1-25.1   C369.6,231.1,380.9,242.3,381,255.8z"></path>
                     </g>
                 </svg>
-                <span>AI Chat Bot</span>
+                <span>Asistente SQL</span>
+              </div>
+              <div className="Content__sideBar--links-link" onClick={() => window.location.href = '/connections'}>
+                {/* SVG Database */}
+                <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 512 512" enableBackground="new 0 0 512 512;" xmlSpace="preserve" className="fn__svg replaced-svg">
+                    <g>
+                        <path d="M256,32C114.6,32,0,88.6,0,160v192c0,71.4,114.6,128,256,128s256-56.6,256-128V160C512,88.6,397.4,32,256,32z M256,288   c-70.7,0-128-35.8-128-80s57.3-80,128-80s128,35.8,128,80S326.7,288,256,288z M256,448c-70.7,0-128-35.8-128-80s57.3-80,128-80   s128,35.8,128,80S326.7,448,256,448z"/>
+                    </g>
+                </svg>
+                <span>Conexiones</span>
               </div>
             </div>
           </div>
+          
+
           <div className="Content__sideBar--item">
             <div className="Content__sideBar--title">
               <h2>Support</h2>
@@ -283,7 +296,7 @@ function Chat() {
           <div className="Content__body--chatsContainer">
             <div className="Content__body--left">
               <div className="Content__body--title">
-                <h1>{currentSession?.title || 'No Chat Selected'}</h1>
+                <h1>{currentSession?.title || 'SQL Assistant'}</h1>
               </div>
               <div className="Content__body--chats">
                 {currentSession && currentSession.messages.length > 0 ? (
@@ -296,7 +309,22 @@ function Chat() {
                         <span>{msg.author === 'user' ? 'You' : 'Bot'}</span>
                       </div>
                       <div className="Content__body--chats-messageText">
-                        <p>{msg.content}</p>
+                        {msg.author === 'bot' && msg.responseData ? (
+                          <ChatResponse
+                            type={msg.responseData.type}
+                            sql={msg.responseData.sql}
+                            data={msg.responseData.data}
+                            affectedRows={msg.responseData.affectedRows}
+                            affectedRecords={msg.responseData.affectedRecords}
+                            affectedCount={msg.responseData.affectedCount}
+                            onConfirm={handleConfirmAction}
+                            onCancel={handleCancelAction}
+                            isConfirming={isProcessing}
+                            isCompleted={msg.responseData.type !== 'pending'}
+                          />
+                        ) : (
+                          <p>{msg.content}</p>
+                        )}
                         <small>{formatDate(msg.timestamp)}</small>
                       </div>
                     </div>
@@ -309,21 +337,41 @@ function Chat() {
                 <div className="Content__body--sendMessage">
                   <textarea
                     rows={1}
-                    placeholder="Send a message..."
+                    placeholder={isProcessing ? "Procesando consulta..." : "Escribe tu consulta SQL en lenguaje natural..."}
                     id="sendMessageTextarea"
-                    style={{ height: '60px', overflowY: 'hidden' }}
+                    style={{ 
+                      height: '60px', 
+                      overflowY: 'hidden'
+                    }}
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
+                    disabled={isProcessing}
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === 'Enter' && !e.shiftKey && !isProcessing) {
                         e.preventDefault();
                         sendMessage(newMessage);
                       }
                     }}
                   />
-                  <button onClick={() => sendMessage(newMessage)}>
-                    {/* SVG send */}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 287.7 223.4" className="fn__svg replaced-svg"><g><path d="M55,127.6c2,0,3,0,4,0c49.3,0,98.5,0,147.8,0c23.2,0,42.1-14.5,47.4-36.4c1-4.3,1.3-8.9,1.4-13.3c0.1-20.2,0-40.4,0.1-60.6   c0-10.4,6.9-17.4,16.6-17.2c8.1,0.2,15.2,6.5,15.3,14.5c0.1,25.1,0.9,50.2-0.8,75.2c-2.3,33.5-30.5,62.6-63.7,68.4   c-5.6,1-11.4,1.5-17.1,1.5c-48.6,0.1-97.3,0.1-145.9,0.1c-1.4,0-2.7,0-5,0c1.4,1.4,2.2,2.4,3.1,3.3c11,11,22.1,22,33,33.1   c8.9,9.1,5.2,23.6-6.7,26.9c-6.3,1.7-11.7-0.2-16.3-4.8c-19-19.1-38.1-38.1-57.1-57.2c-2-2-4.1-4-6.1-6c-6.1-6.3-6.3-16-0.1-22.2   c21.3-21.4,42.7-42.7,64.1-64c6.6-6.5,16.2-6.4,22.5-0.3c6.4,6.3,6.6,16.1,0,22.8c-10.8,11.1-21.8,21.9-32.8,32.9   C57.5,124.9,56.6,125.9,55,127.6z"></path></g></svg>
+                  <button 
+                    onClick={() => sendMessage(newMessage)} 
+                    disabled={isProcessing || !newMessage.trim()}
+                    style={{ 
+                      opacity: isProcessing || !newMessage.trim() ? 0.5 : 1,
+                      cursor: isProcessing || !newMessage.trim() ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isProcessing ? (
+                      <div className="loading-spinner">
+                        <div className="spinner"></div>
+                      </div>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 287.7 223.4" className="fn__svg replaced-svg">
+                        <g>
+                          <path d="M55,127.6c2,0,3,0,4,0c49.3,0,98.5,0,147.8,0c23.2,0,42.1-14.5,47.4-36.4c1-4.3,1.3-8.9,1.4-13.3c0.1-20.2,0-40.4,0.1-60.6   c0-10.4,6.9-17.4,16.6-17.2c8.1,0.2,15.2,6.5,15.3,14.5c0.1,25.1,0.9,50.2-0.8,75.2c-2.3,33.5-30.5,62.6-63.7,68.4   c-5.6,1-11.4,1.5-17.1,1.5c-48.6,0.1-97.3,0.1-145.9,0.1c-1.4,0-2.7,0-5,0c1.4,1.4,2.2,2.4,3.1,3.3c11,11,22.1,22,33,33.1   c8.9,9.1,5.2,23.6-6.7,26.9c-6.3,1.7-11.7-0.2-16.3-4.8c-19-19.1-38.1-38.1-57.1-57.2c-2-2-4.1-4-6.1-6c-6.1-6.3-6.3-16-0.1-22.2   c21.3-21.4,42.7-42.7,64.1-64c6.6-6.5,16.2-6.4,22.5-0.3c6.4,6.3,6.6,16.1,0,22.8c-10.8,11.1-21.8,21.9-32.8,32.9   C57.5,124.9,56.6,125.9,55,127.6z"></path>
+                        </g>
+                      </svg>
+                    )}
                   </button>
                 </div>
                 <div className="Content__body--rights">
@@ -340,7 +388,7 @@ function Chat() {
                 <div className="Content__body--newChatCard" onClick={createNewSession} style={{ cursor: 'pointer' }}>
                   <div className="Content__body--newChat-icon"></div>
                   <div className="Content__body--newChat-text">
-                    <span>New Chat</span>
+                    <span>Nuevo Chat SQL</span>
                   </div>
                 </div>
               </div>
@@ -430,7 +478,41 @@ function Chat() {
         </div>
       </div>
 
-
+      {/* Estilos para el spinner de carga */}
+      <style>{`
+        .loading-spinner {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+        }
+        
+        .spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid transparent;
+          border-top: 2px solid #ffffff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .Content__body--sendMessage button:disabled {
+          background-color: #666 !important;
+        }
+        
+        .Content__body--sendMessage textarea:disabled {
+          background-color: transparent !important;
+          color: inherit !important;
+          border-color: inherit !important;
+          opacity: 0.7;
+        }
+      `}</style>
     </>
   );
 }

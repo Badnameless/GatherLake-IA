@@ -3,6 +3,14 @@ export interface ChatMessage {
   content: string;
   author: 'user' | 'bot';
   timestamp: string;
+  responseData?: {
+    type: 'select' | 'insert' | 'update' | 'delete' | 'pending';
+    sql: string;
+    data?: any[];
+    affectedRows?: number;
+    affectedRecords?: any[];
+    affectedCount?: number;
+  };
 }
 
 export interface ChatSession {

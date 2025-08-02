@@ -13,6 +13,10 @@ class ConnectionController extends Controller
      */
     public function index()
     {
+        if (request()->wantsJson()) {
+            return response()->json(auth()->user()->connections);
+        }
+
         return Inertia::render('Connections/Index', [
             'connections' => auth()->user()->connections,
         ]);
@@ -38,10 +42,18 @@ class ConnectionController extends Controller
             'port' => 'required|string|max:255',
             'database' => 'required|string|max:255',
             'username' => 'required|string|max:255',
-            'password' => 'required|string|max:255',
+            'password' => 'nullable|string|max:255',
         ]);
 
-        $request->user()->connections()->create($request->all());
+        // Check if this will be the first connection
+        $isFirstConnection = $request->user()->connections()->count() === 0;
+
+        $connection = $request->user()->connections()->create($request->all());
+
+        // If this is the first connection, make it active
+        if ($isFirstConnection) {
+            $connection->activate();
+        }
 
         return redirect()->route('connections.index');
     }
@@ -51,7 +63,11 @@ class ConnectionController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $connection = auth()->user()->connections()->findOrFail($id);
+        
+        return Inertia::render('Connections/Show', [
+            'connection' => $connection,
+        ]);
     }
 
     /**
@@ -59,7 +75,11 @@ class ConnectionController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $connection = auth()->user()->connections()->findOrFail($id);
+        
+        return Inertia::render('Connections/Edit', [
+            'connection' => $connection,
+        ]);
     }
 
     /**
@@ -67,7 +87,21 @@ class ConnectionController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $connection = auth()->user()->connections()->findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'driver' => 'required|string|max:255',
+            'host' => 'required|string|max:255',
+            'port' => 'required|string|max:255',
+            'database' => 'required|string|max:255',
+            'username' => 'required|string|max:255',
+            'password' => 'nullable|string|max:255',
+        ]);
+
+        $connection->update($request->all());
+
+        return redirect()->route('connections.index');
     }
 
     /**
@@ -75,6 +109,44 @@ class ConnectionController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $connection = auth()->user()->connections()->findOrFail($id);
+        
+        // If this is the active connection, activate another one if available
+        if ($connection->is_active) {
+            $otherConnection = auth()->user()->connections()
+                ->where('id', '!=', $id)
+                ->first();
+            
+            if ($otherConnection) {
+                $otherConnection->activate();
+            }
+        }
+
+        $connection->delete();
+
+        return redirect()->route('connections.index');
+    }
+
+    /**
+     * Activate a connection
+     */
+    public function activate(string $id)
+    {
+        $connection = auth()->user()->connections()->findOrFail($id);
+        $connection->activate();
+
+        return redirect()->route('connections.index');
+    }
+
+    /**
+     * Get the active connection for the authenticated user
+     */
+    public function getActive()
+    {
+        $activeConnection = Connection::getActiveForUser(auth()->id());
+        
+        return response()->json([
+            'connection' => $activeConnection
+        ]);
     }
 }

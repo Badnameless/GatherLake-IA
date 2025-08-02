@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChatMessage, ChatSession, UserInfo, ChatData } from '../types/chat';
 import { router } from '@inertiajs/react';
+import axios from 'axios';
+import ChatResponse from '../components/chat-response';
 
 // Mock data - In real app, this would come from API
 const mockUserInfo: UserInfo = {
@@ -17,48 +19,18 @@ const mockUserInfo: UserInfo = {
 const mockSessions: ChatSession[] = [
   {
     id: '1',
-    title: 'Chat Bot Definition',
+    title: 'SQL Assistant',
     messages: [
       {
         id: '1',
-        content: 'What is a chat bot?',
-        author: 'user',
-        timestamp: '2025-01-28T10:00:00Z'
-      },
-      {
-        id: '2',
-        content: 'At the most basic level, a chatbot is a computer program that simulates and processes human conversation (either written or spoken), allowing humans to interact with digital devices as if they were communicating with a real person. Chatbots can be as simple as rudimentary programs that answer a simple query with a single-line response, or as sophisticated as digital assistants that learn and evolve to deliver increasing levels of personalization as they gather and process information.',
+        content: 'Hola! Soy tu asistente SQL. Puedes preguntarme en lenguaje natural y te ayudaré a generar consultas SQL. ¿En qué puedo ayudarte?',
         author: 'bot',
-        timestamp: '2025-01-28T10:01:00Z'
+        timestamp: '2025-01-28T10:00:00Z'
       }
     ],
     createdAt: '2025-01-28T10:00:00Z',
     updatedAt: '2025-01-28T10:01:00Z',
     isActive: true
-  },
-  {
-    id: '2',
-    title: 'Essay: Marketing',
-    messages: [],
-    createdAt: '2025-01-28T09:00:00Z',
-    updatedAt: '2025-01-28T09:00:00Z',
-    isActive: false
-  },
-  {
-    id: '3',
-    title: 'Future of Social Media',
-    messages: [],
-    createdAt: '2025-01-28T08:00:00Z',
-    updatedAt: '2025-01-28T08:00:00Z',
-    isActive: false
-  },
-  {
-    id: '4',
-    title: 'Business Ideas',
-    messages: [],
-    createdAt: '2025-01-28T07:00:00Z',
-    updatedAt: '2025-01-28T07:00:00Z',
-    isActive: false
   }
 ];
 
@@ -76,8 +48,18 @@ export const useChat = () => {
   const [editingTitle, setEditingTitle] = useState<string>('');
   const [showActionModal, setShowActionModal] = useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [activeConnection, setActiveConnection] = useState<any>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    sql: string;
+    type: 'update' | 'delete';
+    affectedRecords: any[];
+    affectedCount: number;
+  } | null>(null);
 
-  // Load initial data
+  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
+
+  // Load initial data and active connection
   useEffect(() => {
     const loadChatData = async () => {
       try {
@@ -93,7 +75,15 @@ export const useChat = () => {
           isLoading: false,
           error: null
         });
-      } catch (error) {
+
+        // Get active connection
+        try {
+          const response = await axios.get('/connections/active');
+          setActiveConnection(response.data.connection);
+        } catch (error) {
+          console.log('No active connection found');
+        }
+      } catch {
         setChatData(prev => ({
           ...prev,
           isLoading: false,
@@ -139,80 +129,232 @@ export const useChat = () => {
     router.post('/logout');
   }, []);
 
-  // Send message
+  // Send message with NL2SQL functionality
   const sendMessage = useCallback(async (message: string) => {
-    if (!message.trim()) return;
+    if (!message.trim() || !activeConnection) return;
 
-    const newUserMessage: ChatMessage = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: message,
       author: 'user',
       timestamp: new Date().toISOString()
     };
 
-    // Add user message immediately
     setChatData(prev => {
       if (!prev.currentSession) return prev;
-
-      const updatedSession = {
-        ...prev.currentSession,
-        messages: [...prev.currentSession.messages, newUserMessage],
-        updatedAt: new Date().toISOString()
-      };
-
       return {
         ...prev,
-        currentSession: updatedSession,
-        sessions: prev.sessions.map(session => 
-          session.id === updatedSession.id ? updatedSession : session
-        )
+        currentSession: {
+          ...prev.currentSession,
+          messages: [...prev.currentSession.messages, userMessage]
+        }
       };
     });
 
     setNewMessage('');
+    setIsProcessing(true);
 
     try {
-      // Simulate API call to get bot response
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if we have a pending confirmation
+      if (pendingConfirmation) {
+        const userInput = message.toLowerCase().trim();
+        const isConfirming = userInput === 'sí' || userInput === 'si' || userInput === 'confirmar' || userInput === 'aceptar';
+        const isCanceling = userInput === 'no' || userInput === 'cancelar' || userInput === 'cancel';
+
+        let botResponse: ChatMessage;
+
+        if (isConfirming) {
+          // Execute the pending query
+          const response = await axios.post('/nl2sql/confirm', {
+            sql: pendingConfirmation.sql,
+            type: pendingConfirmation.type
+          }, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+
+          console.log('Confirmation response:', response.data);
+
+          if (response.data.result) {
+            const result = response.data.result;
+            botResponse = {
+              id: (Date.now() + 1).toString(),
+              content: `Consulta ${result.type.toUpperCase()} confirmada y ejecutada`,
+              author: 'bot',
+              timestamp: new Date().toISOString(),
+              responseData: {
+                type: result.type,
+                sql: result.sql,
+                data: result.data,
+                affectedRows: result.affected_rows
+              }
+            };
+          } else {
+            botResponse = {
+              id: (Date.now() + 1).toString(),
+              content: 'Consulta confirmada y ejecutada exitosamente.',
+              author: 'bot',
+              timestamp: new Date().toISOString()
+            };
+          }
+
+          setPendingConfirmation(null);
+        } else if (isCanceling) {
+          // Cancel the pending query
+          botResponse = {
+            id: (Date.now() + 1).toString(),
+            content: 'Consulta cancelada exitosamente. La operación no se ejecutó.',
+            author: 'bot',
+            timestamp: new Date().toISOString()
+          };
+          setPendingConfirmation(null);
+        } else {
+          // Invalid input for confirmation
+          botResponse = {
+            id: (Date.now() + 1).toString(),
+            content: 'Por favor, responde con "SÍ" o "CONFIRMAR" para ejecutar la consulta, o "NO" o "CANCELAR" para cancelarla.',
+            author: 'bot',
+            timestamp: new Date().toISOString()
+          };
+        }
+
+        setChatData(prev => {
+          if (!prev.currentSession) return prev;
+          return {
+            ...prev,
+            currentSession: {
+              ...prev.currentSession,
+              messages: [...prev.currentSession.messages, botResponse]
+            }
+          };
+        });
+
+        setIsProcessing(false);
+        return;
+      }
+
+      // Send to NL2SQL API (no need to send connection_id anymore)
+      const response = await axios.post('/nl2sql', {
+        query: message
+      }, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Response from NL2SQL:', response.data); // Debug log
+      console.log('Response status:', response.status); // Debug log
+      console.log('Response headers:', response.headers); // Debug log
+
+      let botResponse: ChatMessage;
+
+      if (response.data.pendingQuery) {
+        // Handle UPDATE/DELETE queries that need confirmation
+        const { sql, type, affectedRecords, affectedCount } = response.data.pendingQuery;
+        
+        // Save pending confirmation
+        setPendingConfirmation({ sql, type, affectedRecords, affectedCount });
+        
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: `Consulta ${type.toUpperCase()} que requiere confirmación`,
+          author: 'bot',
+          timestamp: new Date().toISOString(),
+          responseData: {
+            type: 'pending',
+            sql,
+            affectedRecords,
+            affectedCount
+          }
+        };
+      } else if (response.data.result) {
+        // Handle structured results (SELECT, UPDATE, DELETE, INSERT)
+        const result = response.data.result;
+        
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: `Consulta ${result.type.toUpperCase()} ejecutada`,
+          author: 'bot',
+          timestamp: new Date().toISOString(),
+          responseData: {
+            type: result.type,
+            sql: result.sql,
+            data: result.data,
+            affectedRows: result.affected_rows
+          }
+        };
+      } else if (response.data.success) {
+        // Handle success messages
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: response.data.success,
+          author: 'bot',
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Handle other responses
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: 'Consulta procesada correctamente.',
+          author: 'bot',
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      setChatData(prev => {
+        if (!prev.currentSession) return prev;
+        return {
+          ...prev,
+          currentSession: {
+            ...prev.currentSession,
+            messages: [...prev.currentSession.messages, botResponse]
+          }
+        };
+      });
+
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      
+      const errorMessage = error.response?.data?.error || 'Error al procesar la consulta.';
       
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: `Respuesta de prueba para el mensaje: "${message}".`,
+        content: `❌ **Error:** ${errorMessage}`,
         author: 'bot',
         timestamp: new Date().toISOString()
       };
 
       setChatData(prev => {
         if (!prev.currentSession) return prev;
-
-        const updatedSession = {
-          ...prev.currentSession,
-          messages: [...prev.currentSession.messages, botResponse],
-          updatedAt: new Date().toISOString()
-        };
-
         return {
           ...prev,
-          currentSession: updatedSession,
-          sessions: prev.sessions.map(session => 
-            session.id === updatedSession.id ? updatedSession : session
-          )
+          currentSession: {
+            ...prev.currentSession,
+            messages: [...prev.currentSession.messages, botResponse]
+          }
         };
       });
-    } catch (error) {
-      setChatData(prev => ({
-        ...prev,
-        error: 'Failed to send message'
-      }));
+    } finally {
+      setIsProcessing(false);
     }
-  }, []);
+  }, [activeConnection, pendingConfirmation]);
 
   // Create new chat session
   const createNewSession = useCallback(async () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
-      title: 'New Chat',
-      messages: [],
+      title: 'Nuevo Chat SQL',
+      messages: [
+        {
+          id: '1',
+          content: 'Hola! Soy tu asistente SQL. Puedes preguntarme en lenguaje natural y te ayudaré a generar consultas SQL. ¿En qué puedo ayudarte?',
+          author: 'bot',
+          timestamp: new Date().toISOString()
+        }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isActive: true
@@ -305,6 +447,114 @@ export const useChat = () => {
     setEditingTitle('');
   }, []);
 
+  const handleConfirmAction = useCallback(async () => {
+    if (!pendingConfirmation) return;
+
+    setIsProcessing(true);
+    try {
+      const response = await axios.post('/nl2sql/confirm', {
+        sql: pendingConfirmation.sql,
+        type: pendingConfirmation.type
+      }, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Confirmation response:', response.data);
+
+      let botResponse: ChatMessage;
+      if (response.data.result) {
+        const result = response.data.result;
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: `Consulta ${result.type.toUpperCase()} confirmada y ejecutada`,
+          author: 'bot',
+          timestamp: new Date().toISOString(),
+          responseData: {
+            type: result.type,
+            sql: result.sql,
+            data: result.data,
+            affectedRows: result.affected_rows
+          }
+        };
+      } else {
+        botResponse = {
+          id: (Date.now() + 1).toString(),
+          content: 'Consulta confirmada y ejecutada exitosamente.',
+          author: 'bot',
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      setChatData(prev => {
+        if (!prev.currentSession) return prev;
+        return {
+          ...prev,
+          currentSession: {
+            ...prev.currentSession,
+            messages: [...prev.currentSession.messages, botResponse]
+          }
+        };
+      });
+
+      // Mark the pending confirmation as completed
+      setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
+      setPendingConfirmation(null);
+    } catch (error: any) {
+      console.error('Error confirming action:', error);
+      
+      const errorMessage = error.response?.data?.error || 'Error al confirmar la acción.';
+      
+      const botResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `❌ **Error:** ${errorMessage}`,
+        author: 'bot',
+        timestamp: new Date().toISOString()
+      };
+
+      setChatData(prev => {
+        if (!prev.currentSession) return prev;
+        return {
+          ...prev,
+          currentSession: {
+            ...prev.currentSession,
+            messages: [...prev.currentSession.messages, botResponse]
+          }
+        };
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [pendingConfirmation]);
+
+  const handleCancelAction = useCallback(() => {
+    if (!pendingConfirmation) return;
+
+    const botResponse: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      content: 'Consulta cancelada exitosamente. La operación no se ejecutó.',
+      author: 'bot',
+      timestamp: new Date().toISOString()
+    };
+
+    setChatData(prev => {
+      if (!prev.currentSession) return prev;
+      return {
+        ...prev,
+        currentSession: {
+          ...prev.currentSession,
+          messages: [...prev.currentSession.messages, botResponse]
+        }
+      };
+    });
+
+    // Mark the pending confirmation as completed
+    setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
+    setPendingConfirmation(null);
+  }, [pendingConfirmation]);
+
   return {
     chatData,
     newMessage,
@@ -314,17 +564,18 @@ export const useChat = () => {
     setEditingTitle,
     showActionModal,
     showProfileModal,
+    isProcessing,
     sendMessage,
     createNewSession,
     switchSession,
-    updateSessionTitle,
     deleteSession,
     showSessionActions,
-    hideSessionActions,
     startEditingSession,
     cancelEditingSession,
     saveSessionTitle,
     toggleProfileModal,
-    handleLogout
+    handleLogout,
+    handleConfirmAction,
+    handleCancelAction
   };
-}; 
+};

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 
 class UserController extends Controller
@@ -76,5 +77,23 @@ class UserController extends Controller
         $email = User::where('email', $req['email'])->first();
 
         return response()->json(!!$email, 200);
+    }
+
+    public function delete($id)
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // Prevent deleting the current user
+        if ($user->id === Auth::id()) {
+            return response()->json(['error' => 'Cannot delete your own account'], 400);
+        }
+
+        $user->delete();
+        
+        return response()->json(['message' => 'User deleted successfully'], 200);
     }
 }
