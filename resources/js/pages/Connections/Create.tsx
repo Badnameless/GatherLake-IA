@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, Database, Save, Eye, EyeOff } from 'lucide-react';
-import { useChat } from '../../hooks/useChat';
+import { useAuth } from '../../hooks/useAuth';
 import FrontendLayout from '../../components/FrontendLayout';
 import axios from 'axios';
 
@@ -16,19 +16,18 @@ interface ConnectionFormData {
 }
 
 export default function CreateConnection() {
-  const { chatData } = useChat();
-  const { userInfo } = chatData;
+  const { userInfo } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ConnectionFormData>({
-    name: '',
+        name: '',
     host: 'localhost',
     port: '3306',
-    database: '',
-    username: '',
-    password: '',
+        database: '',
+        username: '',
+        password: '',
     driver: 'mysql'
-  });
+    });
 
   const drivers = [
     { value: 'mysql', label: 'MySQL', description: 'Base de datos MySQL' },
@@ -38,7 +37,7 @@ export default function CreateConnection() {
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+        e.preventDefault();
     
     if (!formData.name.trim() || !formData.host.trim() || !formData.database.trim() || !formData.username.trim()) {
       alert('Por favor completa todos los campos obligatorios');
@@ -69,10 +68,10 @@ export default function CreateConnection() {
   };
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
-  return (
+    return (
     <>
       <Head title="Crear Conexión - GatherLake AI" />
       
@@ -104,7 +103,7 @@ export default function CreateConnection() {
           <div className="rounded-2xl p-8" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Driver Selection */}
-              <div>
+                            <div>
                 <label className="block text-sm font-medium mb-3" style={{ color: 'var(--techwave-heading-color)' }}>
                   Tipo de Base de Datos *
                 </label>
@@ -144,16 +143,16 @@ export default function CreateConnection() {
                     </label>
                   ))}
                 </div>
-              </div>
+                            </div>
 
               {/* Connection Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Nombre de la Conexión *
                   </label>
                   <input
-                    type="text"
+                                    type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Mi Base de Datos"
@@ -165,14 +164,14 @@ export default function CreateConnection() {
                       '--tw-ring-color': 'var(--techwave-main-color)'
                     } as React.CSSProperties}
                   />
-                </div>
+                            </div>
 
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Host *
                   </label>
                   <input
-                    type="text"
+                                    type="text"
                     value={formData.host}
                     onChange={(e) => setFormData({ ...formData, host: e.target.value })}
                     placeholder="localhost"
@@ -184,14 +183,14 @@ export default function CreateConnection() {
                       '--tw-ring-color': 'var(--techwave-main-color)'
                     } as React.CSSProperties}
                   />
-                </div>
+                            </div>
 
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Puerto
                   </label>
                   <input
-                    type="text"
+                                    type="text"
                     value={formData.port}
                     onChange={(e) => setFormData({ ...formData, port: e.target.value })}
                     placeholder="3306"
@@ -203,14 +202,14 @@ export default function CreateConnection() {
                       '--tw-ring-color': 'var(--techwave-main-color)'
                     } as React.CSSProperties}
                   />
-                </div>
+                            </div>
 
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Base de Datos *
                   </label>
                   <input
-                    type="text"
+                                    type="text"
                     value={formData.database}
                     onChange={(e) => setFormData({ ...formData, database: e.target.value })}
                     placeholder="nombre_base_datos"
@@ -222,14 +221,14 @@ export default function CreateConnection() {
                       '--tw-ring-color': 'var(--techwave-main-color)'
                     } as React.CSSProperties}
                   />
-                </div>
+                            </div>
 
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Usuario *
                   </label>
                   <input
-                    type="text"
+                                    type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     placeholder="usuario"
@@ -241,9 +240,9 @@ export default function CreateConnection() {
                       '--tw-ring-color': 'var(--techwave-main-color)'
                     } as React.CSSProperties}
                   />
-                </div>
+                            </div>
 
-                <div>
+                            <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
                     Contraseña
                   </label>
@@ -271,7 +270,7 @@ export default function CreateConnection() {
                     </button>
                   </div>
                 </div>
-              </div>
+                            </div>
 
               {/* Submit Button */}
               <div className="pt-6">
@@ -297,10 +296,10 @@ export default function CreateConnection() {
                   )}
                 </button>
               </div>
-            </form>
+                        </form>
           </div>
-        </div>
+            </div>
       </FrontendLayout>
     </>
-  );
+    );
 }

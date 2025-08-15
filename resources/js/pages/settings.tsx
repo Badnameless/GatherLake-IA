@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import { useChat } from '../hooks/useChat';
+import { router } from '@inertiajs/react';
+import { useAuth } from '@/hooks/useAuth';
 import FrontendLayout from '../components/FrontendLayout';
 import Notification from '../components/ui/notification';
 import axios from 'axios';
@@ -19,8 +20,8 @@ interface PasswordFormData {
 type SettingsTab = 'profile' | 'password' | 'appearance';
 
 export default function Settings() {
-  const { chatData, setChatData } = useChat();
-  const { userInfo } = chatData;
+  const { userInfo } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
@@ -88,16 +89,15 @@ export default function Settings() {
         showNotification('success', 'Perfil actualizado exitosamente');
         
         // Actualizar el userInfo local
-        if (setChatData && chatData.userInfo) {
-          setChatData({
-            ...chatData,
-            userInfo: {
-              ...chatData.userInfo,
-              name: profileData.name,
-              email: profileData.email
-            }
-          });
-        }
+        // La lógica de actualización del userInfo ahora viene del backend
+        // setChatData({
+        //   ...chatData,
+        //   userInfo: {
+        //     ...chatData.userInfo,
+        //     name: profileData.name,
+        //     email: profileData.email
+        //   }
+        // });
       } else {
         const result = response.data;
         console.error('Error del servidor:', result);
@@ -204,7 +204,7 @@ export default function Settings() {
   };
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   const tabs = [

@@ -8,6 +8,8 @@
     padding-top: 38px;
     min-height: calc(100vh - 100px);
     position: relative;
+    max-width: 100%;
+    overflow: hidden;
 }
 .Content__body--title {
     margin-bottom: 23px;

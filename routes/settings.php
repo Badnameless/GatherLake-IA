@@ -5,8 +5,6 @@ use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Comentado: Ahora manejado por páginas React del frontend
-/*
 Route::middleware('auth')->group(function () {
     Route::redirect('settings', 'settings/profile');
 
@@ -21,4 +19,3 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('settings/appearance');
     })->name('appearance');
 });
-*/

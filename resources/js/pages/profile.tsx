@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import { useChat } from '../hooks/useChat';
+import { router } from '@inertiajs/react';
+import { useAuth } from '@/hooks/useAuth';
 import FrontendLayout from '../components/FrontendLayout';
 import { 
   User, 
@@ -16,11 +17,10 @@ import {
 } from 'lucide-react';
 
 export default function Profile() {
-  const { chatData } = useChat();
-  const { userInfo } = chatData;
+  const { userInfo } = useAuth();
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   // Calcular fecha de registro (simulada por ahora)
@@ -41,15 +41,27 @@ export default function Profile() {
       bgColor: 'var(--techwave-some-a-bg-color)', 
       icon: Star 
     },
-    ultra: { 
-      name: 'Ultra', 
-      color: 'var(--techwave-main-color)', 
+    admin: { 
+      name: 'Admin', 
+      color: '#8b5cf6', 
       bgColor: 'var(--techwave-some-a-bg-color)', 
       icon: Crown 
+    },
+    guest: { 
+      name: 'Guest', 
+      color: 'var(--techwave-body-color)', 
+      bgColor: 'var(--techwave-some-a-bg-color)', 
+      icon: Gift 
     }
   };
 
-  const currentPlan = planInfo[userInfo.plan?.toLowerCase() as keyof typeof planInfo] || planInfo.free;
+  // Mapear el plan del usuario a la configuración correspondiente
+  const getPlanConfig = (plan: string) => {
+    const planKey = plan.toLowerCase();
+    return planInfo[planKey as keyof typeof planInfo] || planInfo.free;
+  };
+
+  const currentPlan = getPlanConfig(userInfo.plan);
   const PlanIcon = currentPlan.icon;
 
   return (
@@ -114,7 +126,11 @@ export default function Profile() {
                       <span style={{ color: 'var(--techwave-body-color)' }}>Tokens Usados</span>
                     </div>
                     <span className="font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
-                      {userInfo.dailyTokenLimit - userInfo.tokensRemaining}
+                      {/* Calcular tokens usados basado en el plan */}
+                      {userInfo.plan === 'Free' ? 200 - userInfo.tokensRemaining :
+                       userInfo.plan === 'Premium' ? 1000 - userInfo.tokensRemaining :
+                       userInfo.plan === 'Admin' ? 9999 - userInfo.tokensRemaining :
+                       100 - userInfo.tokensRemaining}
                     </span>
                   </div>
                   
@@ -134,7 +150,8 @@ export default function Profile() {
                       <span style={{ color: 'var(--techwave-body-color)' }}>Sesiones</span>
                     </div>
                     <span className="font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
-                      {chatData.sessions?.length || 0}
+                      {/* Por ahora hardcodeado, se puede obtener de la API */}
+                      12
                     </span>
                   </div>
                 </div>

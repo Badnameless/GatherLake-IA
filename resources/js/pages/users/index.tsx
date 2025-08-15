@@ -210,7 +210,7 @@ export default function Users() {
                         <Button 
                             label="Crear Usuario" 
                             icon="pi pi-plus" 
-                            className="bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700"
+                            className="border border-[#2D2D2D] bg-[#171717] text-white hover:bg-[#1F1F1F]"
                         />
                     </Link>
                 </div>
@@ -227,6 +227,97 @@ export default function Users() {
                     />
                 </div>
             </div>
+
+            {/* Estilos globales para componentes PrimeReact */}
+            <style jsx global>{`
+                /* Todos los botones del CRUD mantienen el fondo oscuro */
+                .p-button {
+                    background: #171717 !important;
+                    border-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-button:hover {
+                    background: #1F1F1F !important;
+                    border-color: #2D2D2D !important;
+                }
+                
+                .p-button:focus {
+                    box-shadow: none !important;
+                }
+                
+                /* Estilos para el ConfirmDialog */
+                .p-confirm-dialog {
+                    background: #171717 !important;
+                    border-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-dialog-header {
+                    background: #171717 !important;
+                    border-bottom-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-dialog-title {
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-dialog-content {
+                    background: #171717 !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-dialog-footer {
+                    background: #171717 !important;
+                    border-top-color: #2D2D2D !important;
+                }
+                
+                /* Botones del ConfirmDialog */
+                .p-confirm-dialog .p-button.p-button-danger {
+                    background: #dc2626 !important;
+                    border-color: #dc2626 !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-button.p-button-danger:hover {
+                    background: #b91c1c !important;
+                    border-color: #b91c1c !important;
+                }
+                
+                .p-confirm-dialog .p-button:not(.p-button-danger) {
+                    background: #171717 !important;
+                    border-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-confirm-dialog .p-button:not(.p-button-danger):hover {
+                    background: #1F1F1F !important;
+                    border-color: #2D2D2D !important;
+                }
+                
+                /* Overlay del ConfirmDialog */
+                .p-dialog-mask {
+                    background: rgba(0, 0, 0, 0.8) !important;
+                }
+                
+                .p-toast {
+                    background: #171717 !important;
+                    border-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-toast .p-toast-message {
+                    background: #171717 !important;
+                    border-color: #2D2D2D !important;
+                    color: #FFFFFF !important;
+                }
+                
+                .p-toast .p-toast-message-content {
+                    background: #171717 !important;
+                    color: #FFFFFF !important;
+                }
+            `}</style>
         </AppLayout>
     );
 }

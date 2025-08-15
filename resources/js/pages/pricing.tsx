@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Check, Star, Zap, Crown, ChevronDown } from 'lucide-react';
 import { useChat } from '../hooks/useChat';
 import FrontendLayout from '../components/FrontendLayout';
@@ -90,7 +91,7 @@ export default function Pricing() {
   ];
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   return (

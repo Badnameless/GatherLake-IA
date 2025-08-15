@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, Database, Save, Eye, EyeOff } from 'lucide-react';
-import { useChat } from '../../hooks/useChat';
+import { useAuth } from '../../hooks/useAuth';
 import FrontendLayout from '../../components/FrontendLayout';
 import axios from 'axios';
 
@@ -20,8 +20,7 @@ interface PageProps {
 }
 
 export default function EditConnection() {
-  const { chatData } = useChat();
-  const { userInfo } = chatData;
+  const { userInfo } = useAuth();
   const { id } = usePage<PageProps>().props;
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +111,7 @@ export default function EditConnection() {
   };
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   if (isLoading) {

@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
@@ -11,7 +11,6 @@ import { Panel } from 'primereact/panel';
 import { Toast } from 'primereact/toast';
 import { useRef, useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -20,13 +19,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-interface UserShowProps {
-    userId: string | number;
-}
-
-export default function UserShow({ userId }: UserShowProps) {
+export default function UserShow() {
     const toast = useRef<Toast>(null);
-    const { id } = useParams();
+    const page = usePage();
+    // Extraer el ID del usuario de la URL correctamente
+    const urlParts = page.url.split('/');
+    const userId = urlParts[urlParts.length - 1]; // Tomar el último segmento (el ID)
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -34,8 +32,8 @@ export default function UserShow({ userId }: UserShowProps) {
         const fetchUser = async () => {
             try {
                 setLoading(true);
-                const response = await axios.post('/api/fetch/user', {
-                    id: userId || id
+                const response = await axios.post('/api/get/user', {
+                    id: parseInt(userId) // Convertir a número
                 }, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -48,7 +46,7 @@ export default function UserShow({ userId }: UserShowProps) {
                 } else {
                     throw new Error('Usuario no encontrado');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 toast.current?.show({
                     severity: 'error',
                     summary: 'Error',
@@ -61,10 +59,10 @@ export default function UserShow({ userId }: UserShowProps) {
             }
         };
 
-        if (userId || id) {
+        if (userId && !isNaN(parseInt(userId))) {
             fetchUser();
         }
-    }, [userId, id]);
+    }, [userId]);
 
     if (loading) {
         return (

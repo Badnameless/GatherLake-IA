@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { LoaderCircle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { FormEventHandler, useState } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -28,6 +28,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         remember: false,
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         post(route('login'), {
@@ -36,46 +38,71 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
-            <Head title="Log in" />
+        <AuthLayout title="Inicia sesión en tu cuenta" description="Ingresa tu email y contraseña para acceder">
+            <Head title="Iniciar Sesión" />
 
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            required
-                            autoFocus
-                            tabIndex={1}
-                            autoComplete="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="email@example.com"
-                        />
+            <form className="space-y-6" onSubmit={submit}>
+                {status && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">{status}</p>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                            Correo electrónico
+                        </Label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="email"
+                                type="email"
+                                required
+                                autoFocus
+                                tabIndex={1}
+                                autoComplete="email"
+                                value={data.email}
+                                onChange={(e) => setData('email', e.target.value)}
+                                placeholder="tu@email.com"
+                                className="pl-10 h-11 border-border bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+                            />
+                        </div>
                         <InputError message={errors.email} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <div className="flex items-center">
-                            <Label htmlFor="password">Password</Label>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                                Contraseña
+                            </Label>
                             {canResetPassword && (
-                                <TextLink href={route('password.request')} className="ml-auto text-sm" tabIndex={5}>
-                                    Forgot password?
+                                <TextLink href={route('password.request')} className="text-xs text-primary hover:text-primary/80 transition-colors" tabIndex={5}>
+                                    ¿Olvidaste tu contraseña?
                                 </TextLink>
                             )}
                         </div>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            tabIndex={2}
-                            autoComplete="current-password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Password"
-                        />
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                required
+                                tabIndex={2}
+                                autoComplete="current-password"
+                                value={data.password}
+                                onChange={(e) => setData('password', e.target.value)}
+                                placeholder="••••••••"
+                                className="pl-10 pr-10 h-11 border-border bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
                         <InputError message={errors.password} />
                     </div>
 
@@ -86,25 +113,40 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             checked={data.remember}
                             onClick={() => setData('remember', !data.remember)}
                             tabIndex={3}
+                            className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <Label htmlFor="remember">Remember me</Label>
+                        <Label htmlFor="remember" className="text-sm text-foreground cursor-pointer">
+                            Recordarme
+                        </Label>
                     </div>
-
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Log in
-                    </Button>
                 </div>
 
-                <div className="text-center text-sm text-muted-foreground">
-                    Don't have an account?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Sign up
-                    </TextLink>
+                <Button 
+                    type="submit" 
+                    className="w-full h-11 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]" 
+                    style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                    tabIndex={4} 
+                    disabled={processing}
+                >
+                    {processing ? (
+                        <>
+                            <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+                            Iniciando sesión...
+                        </>
+                    ) : (
+                        'Iniciar Sesión'
+                    )}
+                </Button>
+
+                <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                        ¿No tienes una cuenta?{' '}
+                        <TextLink href={route('register')} className="text-primary hover:text-primary/80 font-medium transition-colors">
+                            Regístrate aquí
+                        </TextLink>
+                    </p>
                 </div>
             </form>
-
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
         </AuthLayout>
     );
 }

@@ -109,9 +109,9 @@
     max-width: 44px;
 }
 .tokens_infoModal {
-    width: 200px;
+    width: 400px;
     position: absolute;
-    left: 40px;
+    left: 0px;
     top: 100%;
     background-color: var(--techwave-header-bg-color);
     padding: 12px 15px;
@@ -414,36 +414,136 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-    color: #8b4513;
+    background: var(--techwave-some-a-bg-color);
+    color: var(--techwave-main-color);
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
-    animation: premium-glow 2s ease-in-out infinite alternate;
+    border: 1px solid var(--techwave-border-color);
 }
 
 .premium-icon {
     font-size: 14px;
-    animation: star-spin 3s linear infinite;
 }
 
-@keyframes premium-glow {
+/* Estilos para el modal de tokens reorganizado */
+.tokens_infoModal .plan-section,
+.tokens_infoModal .tokens-section,
+.tokens_infoModal .renewal-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(156, 163, 175, 0.05);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(156, 163, 175, 0.1);
+}
+
+.tokens_infoModal .plan-title,
+.tokens_infoModal .tokens-title,
+.tokens_infoModal .renewal-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9ca3af;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tokens_infoModal .plan-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tokens_infoModal .plan-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tokens_infoModal .premium-star {
+    font-size: 1.125rem;
+    color: var(--techwave-main-color);
+}
+
+.tokens_infoModal .admin-crown {
+    font-size: 1.125rem;
+    color: #8b5cf6;
+    animation: crown-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes crown-glow {
     from {
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.5));
     }
     to {
-        box-shadow: 0 4px 16px rgba(255, 215, 0, 0.6);
+        filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.8));
     }
 }
 
-@keyframes star-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.tokens_infoModal .tokens-display {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.tokens_infoModal .tokens-count {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #10b981;
+    line-height: 1;
+}
+
+.tokens_infoModal .tokens-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.tokens_infoModal .tokens-limit {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.tokens_infoModal .renewal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.tokens_infoModal .renewal-time {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.tokens_infoModal .renewal-note {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.tokens_infoModal .upgrade-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tokens_infoModal .upgrade-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }

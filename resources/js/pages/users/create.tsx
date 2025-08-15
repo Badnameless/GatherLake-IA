@@ -1,14 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Divider } from 'primereact/divider';
-import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import axios from 'axios';
 import { classNames } from 'primereact/utils';
 
@@ -16,6 +15,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Usuarios',
         href: '/users',
+    },
+    {
+        title: 'Crear Usuario',
+        href: '/users/create',
     },
 ];
 
@@ -31,106 +34,62 @@ const statuses = [
     { label: 'Pendiente', value: 'pendiente' }
 ];
 
-export default function UserEdit() {
+export default function UserCreate() {
     const toast = useRef<Toast>(null);
-    const page = usePage();
-    // Extraer el ID del usuario de la URL correctamente
-    const urlParts = page.url.split('/');
-    const userId = urlParts[urlParts.length - 2]; // Tomar el penúltimo segmento (el ID, no "edit")
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        role: '',
-        status: ''
+        password: '',
+        password_confirmation: '',
+        role: 'user',
+        status: 'activo'
     });
     const [errors, setErrors] = useState<any>({});
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                setLoading(true);
-                const response = await axios.post('/api/get/user', {
-                    id: parseInt(userId) // Convertir a número
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.data) {
-                    setUser(response.data);
-                    setFormData({
-                        name: response.data.name,
-                        email: response.data.email,
-                        role: response.data.roles?.[0]?.name || 'user',
-                        status: response.data.status
-                    });
-                } else {
-                    throw new Error('Usuario no encontrado');
-                }
-            } catch (error: any) {
-                toast.current?.show({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: error.response?.data?.message || error.message || 'Error al cargar los datos del usuario',
-                    life: 3000
-                });
-                console.error('Error fetching user:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (userId && userId !== 'edit') {
-            fetchUser();
-        }
-    }, [userId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setProcessing(true);
+        setErrors({});
         
         try {
-            const response = await axios.post('/api/update/user', {
-                id: userId, // Usamos el ID original que recibimos como prop
-                name: formData.name,
-                email: formData.email,
-                status: formData.status,
-                role: formData.role
-            }, {
+            const response = await axios.post('/api/create/user', formData, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 }
             });
 
-            toast.current?.show({
-                severity: 'success',
-                summary: 'Éxito',
-                detail: 'Usuario actualizado correctamente',
-                life: 3000
-            });
-            
-            // Actualizamos los datos pero mantenemos el ID original
-            setUser({
-                ...response.data,
-                id: userId
-            });
+            if (response.data) {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Éxito',
+                    detail: 'Usuario creado correctamente',
+                    life: 3000
+                });
+                
+                // Limpiar formulario
+                setFormData({
+                    name: '',
+                    email: '',
+                    password: '',
+                    password_confirmation: '',
+                    role: 'user',
+                    status: 'activo'
+                });
+            }
         } catch (error: any) {
-            toast.current?.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: error.response?.data?.message || error.message || 'Hubo un problema al actualizar el usuario',
-                life: 3000
-            });
-            
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
+            } else {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: error.response?.data?.message || error.message || 'Error al crear el usuario',
+                    life: 3000
+                });
             }
+            console.error('Error creating user:', error);
         } finally {
             setProcessing(false);
         }
@@ -151,31 +110,16 @@ export default function UserEdit() {
         }
     };
 
-    if (loading || !user) {
-        return (
-            <AppLayout breadcrumbs={[...breadcrumbs, { title: 'Cargando...', href: '' }]}>
-                <Head title="Cargando usuario..." />
-                <div className="flex justify-center items-center h-64 bg-[#0A0A0A]">
-                    <i className="pi pi-spinner pi-spin text-2xl text-blue-500"></i>
-                </div>
-            </AppLayout>
-        );
-    }
-
     return (
-        <AppLayout breadcrumbs={[
-            ...breadcrumbs,
-            { title: user.name, href: `/users/${user.id}` },
-            { title: 'Editar', href: `/users/${user.id}/edit` }
-        ]}>
-            <Head title={`Editar Usuario: ${user.name}`} />
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Crear Usuario - GatherLake AI" />
             <Toast ref={toast} position="top-right" />
             
             <div className="space-y-6 p-6 bg-[#0A0A0A] min-h-screen">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight text-white">Editar Usuario</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-white">Crear Usuario</h1>
                     <div className="flex gap-2">
-                        <Link href={`/users/${user.id}`}>
+                        <Link href="/users">
                             <Button 
                                 label="Cancelar" 
                                 icon="pi pi-times" 
@@ -201,6 +145,7 @@ export default function UserEdit() {
                                         onChange={(e) => handleChange('name', e.target.value)}
                                         className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.name })}
                                         disabled={processing}
+                                        placeholder="Ingrese el nombre completo"
                                     />
                                     {errors.name && <small className="p-error">{errors.name}</small>}
                                 </div>
@@ -211,16 +156,50 @@ export default function UserEdit() {
                                     </label>
                                     <InputText
                                         id="email"
+                                        type="email"
                                         value={formData.email}
                                         onChange={(e) => handleChange('email', e.target.value)}
                                         className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.email })}
                                         disabled={processing}
+                                        placeholder="usuario@ejemplo.com"
                                     />
                                     {errors.email && <small className="p-error">{errors.email}</small>}
+                                </div>
+
+                                <div>
+                                    <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                                        Contraseña
+                                    </label>
+                                    <InputText
+                                        id="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) => handleChange('password', e.target.value)}
+                                        className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.password })}
+                                        disabled={processing}
+                                        placeholder="Mínimo 8 caracteres"
+                                    />
+                                    {errors.password && <small className="p-error">{errors.password}</small>}
                                 </div>
                             </div>
 
                             <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-300 mb-2">
+                                        Confirmar Contraseña
+                                    </label>
+                                    <InputText
+                                        id="password_confirmation"
+                                        type="password"
+                                        value={formData.password_confirmation}
+                                        onChange={(e) => handleChange('password_confirmation', e.target.value)}
+                                        className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.password_confirmation })}
+                                        disabled={processing}
+                                        placeholder="Repita la contraseña"
+                                    />
+                                    {errors.password_confirmation && <small className="p-error">{errors.password_confirmation}</small>}
+                                </div>
+
                                 <div>
                                     <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-2">
                                         Rol
@@ -231,6 +210,7 @@ export default function UserEdit() {
                                         onChange={(e) => handleChange('role', e.value)}
                                         options={roles}
                                         optionLabel="label"
+                                        optionValue="value"
                                         className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.role })}
                                         disabled={processing}
                                         placeholder="Seleccione un rol"
@@ -248,6 +228,7 @@ export default function UserEdit() {
                                         onChange={(e) => handleChange('status', e.value)}
                                         options={statuses}
                                         optionLabel="label"
+                                        optionValue="value"
                                         className={classNames('w-full bg-[#1F1F1F] border-[#2D2D2D] text-white', { 'p-invalid': errors.status })}
                                         disabled={processing}
                                         placeholder="Seleccione un estado"
@@ -261,7 +242,7 @@ export default function UserEdit() {
 
                         <div className="flex justify-end gap-2 p-6">
                             <Button 
-                                label="Guardar cambios" 
+                                label="Crear Usuario" 
                                 icon="pi pi-check" 
                                 type="submit"
                                 loading={processing}
@@ -370,4 +351,4 @@ export default function UserEdit() {
             `}</style>
         </AppLayout>
     );
-}
+} 

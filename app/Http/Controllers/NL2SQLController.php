@@ -23,13 +23,13 @@ class NL2SQLController extends Controller
     public function store(Request $request, NL2SQLTool $nl2sql, ExecutorTool $executor)
     {
         // Debug logs de autenticación
-        \Log::info('=== AUTENTICACIÓN DEBUG ===');
-        \Log::info('Auth::check(): ' . (Auth::check() ? 'true' : 'false'));
-        \Log::info('Auth::id(): ' . Auth::id());
-        \Log::info('Auth::user(): ' . (Auth::user() ? 'Usuario encontrado' : 'Usuario NULL'));
-        \Log::info('Session ID: ' . $request->session()->getId());
-        \Log::info('Request headers: ' . json_encode($request->headers->all()));
-        \Log::info('Request cookies: ' . json_encode($request->cookies->all()));
+        Log::info('=== AUTENTICACIÓN DEBUG ===');
+        Log::info('Auth::check(): ' . (Auth::check() ? 'true' : 'false'));
+        Log::info('Auth::id(): ' . Auth::id());
+        Log::info('Auth::user(): ' . (Auth::user() ? 'Usuario encontrado' : 'Usuario NULL'));
+        Log::info('Session ID: ' . $request->session()->getId());
+        Log::info('Request headers: ' . json_encode($request->headers->all()));
+        Log::info('Request cookies: ' . json_encode($request->cookies->all()));
         
         // Verificación de seguridad
         if (!Auth::check() || !Auth::user()) {
@@ -45,7 +45,7 @@ class NL2SQLController extends Controller
         ]);
 
         // Debug logs
-        \Log::info('NL2SQL store method called', [
+        Log::info('NL2SQL store method called', [
             'user_id' => Auth::id(),
             'user_authenticated' => Auth::check(),
             'request_data' => $request->all()
@@ -54,15 +54,17 @@ class NL2SQLController extends Controller
         // Get the active connection for the authenticated user
         $connection = Connection::getActiveForUser(Auth::id());
         
-        \Log::info('Active connection result', [
+        Log::info('Active connection result', [
             'connection' => $connection,
             'connection_id' => $connection ? $connection->id : null,
             'connection_name' => $connection ? $connection->name : null,
-            'is_active' => $connection ? $connection->is_active : null
+            'is_active' => $connection ? $connection->is_active : null,
+            'user_id' => Auth::id(),
+            'all_user_connections' => Auth::user()->connections()->get(['id', 'name', 'driver', 'is_active'])
         ]);
         
         if (!$connection) {
-            \Log::error('No active connection found for user', [
+            Log::error('No active connection found for user', [
                 'user_id' => Auth::id(),
                 'total_connections' => Auth::user()->connections()->count(),
                 'all_connections' => Auth::user()->connections()->get(['id', 'name', 'is_active'])
@@ -74,13 +76,20 @@ class NL2SQLController extends Controller
             return back()->with('error', 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.');
         }
 
+        // Force the use of the active connection instead of default
+        Log::info('Forcing use of active connection', [
+            'connection_id' => $connection->id,
+            'driver' => $connection->driver,
+            'database' => $connection->database
+        ]);
+
         $sql = $nl2sql->generate($connection, $request->input('query'));
         
         // Check if it's an UPDATE or DELETE query that needs confirmation
         $trimmedSql = strtolower(trim($sql));
         if (str_starts_with($trimmedSql, 'update') || str_starts_with($trimmedSql, 'delete')) {
             // Get affected records for confirmation
-            $affectedRecords = $executor->getAffectedRecords($sql);
+            $affectedRecords = $executor->getAffectedRecords($sql, $connection);
             
             if ($request->wantsJson()) {
                 return response()->json([
@@ -105,7 +114,7 @@ class NL2SQLController extends Controller
         }
 
         // Execute SELECT or INSERT directly
-        $result = $executor->execute($sql);
+        $result = $executor->execute($sql, $connection);
 
         // Determine the type of query
         $queryType = 'select'; // default
@@ -128,7 +137,24 @@ class NL2SQLController extends Controller
             $updatedData = null;
             if ($queryType === 'insert') {
                 try {
-                    $updatedData = DB::select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                    if ($connection) {
+                        // Configure dynamic connection for this query
+                        $connectionConfig = [
+                            'driver' => $connection->driver,
+                            'host' => $connection->host,
+                            'port' => $connection->port,
+                            'database' => $connection->database,
+                            'username' => $connection->username,
+                            'password' => $connection->password,
+                        ];
+                        
+                        config(['database.connections.temp_insert' => $connectionConfig]);
+                        DB::purge('temp_insert');
+                        
+                        $updatedData = DB::connection('temp_insert')->select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                    } else {
+                        $updatedData = DB::select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                    }
                 } catch (\Exception $e) {
                     // If we can't get the updated table, continue without it
                     $updatedData = null;

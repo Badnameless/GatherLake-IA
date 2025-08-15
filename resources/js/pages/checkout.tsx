@@ -173,7 +173,7 @@ export default function Checkout() {
   const plan = planDetails[selectedPlan];
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   return (

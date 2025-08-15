@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use PDO;
 
 class ConnectionController extends Controller
 {
@@ -23,18 +24,18 @@ class ConnectionController extends Controller
         }
 
         if (!Auth::check()) {
-            \Log::info('Usuario no autenticado en ConnectionController@index');
+            Log::info('Usuario no autenticado en ConnectionController@index');
             return response()->json([
                 'error' => 'Usuario no autenticado',
                 'message' => 'Unauthenticated.'
             ], 401);
         }
 
-        \Log::info('Usuario autenticado:', ['user_id' => Auth::id()]);
+        Log::info('Usuario autenticado:', ['user_id' => Auth::id()]);
         
         if (request()->wantsJson()) {
             $connections = Auth::user()->connections;
-            \Log::info('Conexiones encontradas:', ['count' => $connections->count()]);
+            Log::info('Conexiones encontradas:', ['count' => $connections->count()]);
             return response()->json($connections);
         }
 
@@ -178,5 +179,35 @@ class ConnectionController extends Controller
         return response()->json([
             'connection' => $activeConnection
         ]);
+    }
+
+    /**
+     * Test database connection and get available extensions
+     */
+    public function testConnection($id)
+    {
+        try {
+            $connection = Auth::user()->connections()->findOrFail($id);
+            
+            // Get available extensions
+            $extensions = get_loaded_extensions();
+            $pdoDrivers = PDO::getAvailableDrivers();
+            
+            $info = [
+                'connection' => $connection,
+                'php_extensions' => $extensions,
+                'pdo_drivers' => $pdoDrivers,
+                'php_version' => PHP_VERSION,
+                'php_ini_loaded' => php_ini_loaded_file(),
+            ];
+            
+            return response()->json($info);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
     }
 }

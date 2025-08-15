@@ -14,7 +14,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
 
     const handleLogout = () => {
         cleanup();
-        router.flushAll();
+        router.post(route('logout'));
     };
 
     return (
@@ -34,11 +34,9 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link className="block w-full" method="post" href={route('logout')} as="button" onClick={handleLogout}>
-                    <LogOut className="mr-2" />
-                    Log out
-                </Link>
+            <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2" />
+                Log out
             </DropdownMenuItem>
         </>
     );

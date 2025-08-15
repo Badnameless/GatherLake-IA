@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { useChat } from '../hooks/useChat';
 import FrontendLayout from '../components/FrontendLayout';
 import { CreditCard, Download, Calendar, DollarSign, CheckCircle } from 'lucide-react';
@@ -27,7 +28,7 @@ export default function Billing() {
   const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'payment-methods'>('overview');
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   // Mock data - en producción esto vendría de la API

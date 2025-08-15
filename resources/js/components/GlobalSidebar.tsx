@@ -1,4 +1,5 @@
 import React from 'react';
+import { router } from '@inertiajs/react';
 
 interface GlobalSidebarProps {
   activePage?: string;
@@ -10,7 +11,7 @@ export default function GlobalSidebar({ activePage = 'chat', onLogout }: GlobalS
     if (onLogout) {
       onLogout();
     } else {
-      window.location.href = '/logout';
+      router.post('/logout');
     }
   };
 

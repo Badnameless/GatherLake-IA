@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, AlertTriangle, Database, Code } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Database, Code, Maximize2 } from 'lucide-react';
 import { ChatMessage } from '../types/chat';
 
 interface ChatResponseProps {
@@ -31,6 +30,9 @@ export default function ChatResponse({
   isConfirming = false,
   isCompleted = false
 }: ChatResponseProps) {
+  // Estado para el modal de registros completos
+  const [showFullDataModal, setShowFullDataModal] = useState(false);
+  
   // Si se pasa un mensaje, extraer los datos de responseData
   const responseType = type || message?.responseData?.type;
   const responseSql = sql || message?.responseData?.sql;
@@ -39,16 +41,63 @@ export default function ChatResponse({
   const responseAffectedRecords = affectedRecords || message?.responseData?.affectedRecords;
   const responseAffectedCount = affectedCount || message?.responseData?.affectedCount;
 
+  // Generar headers de la tabla si hay datos
+  const headers = useMemo(() => {
+    if (!responseData || responseData.length === 0) return [];
+    return Object.keys(responseData[0]);
+  }, [responseData]);
+
   // Si es un mensaje especial (sin conexión), renderizar como card
   if (message?.isSpecialMessage) {
     return (
-      <div className="bg-card rounded-lg border border-border p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-5 h-5 text-orange-500" />
-          <h3 className="font-semibold text-foreground text-sm">No hay conexión activa</h3>
+      <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-full bg-muted">
+            <Database className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground text-lg">Configuración de Base de Datos Requerida</h3>
+            <p className="text-muted-foreground text-sm">Para usar el asistente SQL necesitas configurar una conexión</p>
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground whitespace-pre-line">
-          {message.content}
+        
+        <div className="space-y-4">
+          <div className="bg-muted/50 rounded-lg p-4 border border-border">
+            <h4 className="font-medium text-foreground mb-3">Pasos para configurar:</h4>
+            <ol className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 bg-muted text-muted-foreground rounded-full text-xs flex items-center justify-center font-medium">1</span>
+                <span>Ve a <strong>Conexiones</strong> en el sidebar izquierdo</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 bg-muted text-muted-foreground rounded-full text-xs flex items-center justify-center font-medium">2</span>
+                <span>Haz clic en <strong>"Nueva Conexión"</strong></span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 bg-muted text-muted-foreground rounded-full text-xs flex items-center justify-center font-medium">3</span>
+                <span>Configura los datos de tu base de datos</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="flex-shrink-0 w-5 h-5 bg-muted text-muted-foreground rounded-full text-xs flex items-center justify-center font-medium">4</span>
+                <span>Activa la conexión una vez configurada</span>
+              </li>
+            </ol>
+          </div>
+          
+          <div className="bg-muted/30 rounded-lg p-4 border border-border">
+            <h4 className="font-medium text-foreground mb-2">Después de configurar:</h4>
+            <p className="text-muted-foreground text-sm">Podrás hacer consultas SQL en lenguaje natural y el asistente te ayudará a generar consultas automáticamente.</p>
+          </div>
+          
+          <div className="text-center">
+            <a 
+              href="/connections" 
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors duration-200 shadow-sm hover:shadow-md"
+            >
+              <Database className="w-4 h-4" />
+              Ir a Conexiones
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -124,7 +173,6 @@ export default function ChatResponse({
       );
     }
 
-    const headers = Object.keys(responseData[0]);
     const needsHorizontalScroll = headers.length > 5;
 
     // Calcular el ancho óptimo de cada columna basado en el contenido
@@ -164,64 +212,83 @@ export default function ChatResponse({
 
     return (
       <div className="bg-card rounded-md border border-border">
-        <div className={`${needsHorizontalScroll ? 'overflow-x-auto' : 'w-full'}`}>
-          <div className={`${needsHorizontalScroll ? 'min-w-full inline-block align-middle' : 'w-full'}`}>
-            <div className="overflow-hidden">
-              <Table className={needsHorizontalScroll ? 'min-w-full' : 'w-full'}>
-                <TableHeader>
-                  <TableRow>
-                    {headers.map((header) => (
-                      <TableHead 
-                        key={header} 
-                        className="font-medium text-xs px-3 py-2 whitespace-nowrap bg-muted/50"
-                        style={{ 
-                          width: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto',
-                          minWidth: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto'
-                        }}
-                      >
-                        {header}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {responseData.slice(0, 10).map((row, index) => (
-                    <TableRow key={index} className="hover:bg-muted/30">
-                      {headers.map((header) => (
-                        <TableCell 
-                          key={header} 
-                          className="text-xs px-3 py-2 whitespace-nowrap"
-                          style={{ 
-                            width: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto',
-                            minWidth: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto'
-                          }}
-                        >
-                          {row[header] !== null && row[header] !== undefined ? (
-                            header.toLowerCase().includes('password') ? (
-                              <div 
-                                className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" 
-                                title={String(row[header])}
-                              >
-                                {String(row[header])}
-                              </div>
-                            ) : (
-                              <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(row[header])}>
-                                {String(row[header])}
-                              </div>
-                            )
-                          ) : '-'}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+        {/* Indicador de scroll horizontal */}
+        {needsHorizontalScroll && (
+          <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border bg-muted/20 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            Desliza horizontalmente para ver más columnas
           </div>
+        )}
+        
+        {/* Contenedor con scroll horizontal */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-max border-collapse">
+            <thead>
+              <tr className="border-b border-border">
+                {headers.map((header) => (
+                  <th 
+                    key={header} 
+                    className="font-medium text-xs px-3 py-2 whitespace-nowrap bg-muted/50 text-left"
+                    style={{ 
+                      width: `${columnWidths[header]}px`,
+                      minWidth: `${columnWidths[header]}px`
+                    }}
+                  >
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {responseData.slice(0, 10).map((row, index) => (
+                <tr key={index} className="border-b border-border hover:bg-muted/30">
+                  {headers.map((header) => (
+                    <td 
+                      key={header} 
+                      className="text-xs px-3 py-2 whitespace-nowrap"
+                      style={{ 
+                        width: `${columnWidths[header]}px`,
+                        minWidth: `${columnWidths[header]}px`
+                      }}
+                    >
+                      {row[header] !== null && row[header] !== undefined ? (
+                        header.toLowerCase().includes('password') ? (
+                          <div 
+                            className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" 
+                            title={String(row[header])}
+                          >
+                            {String(row[header])}
+                          </div>
+                        ) : (
+                          <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(row[header])}>
+                            {String(row[header])}
+                          </div>
+                        )
+                      ) : '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+        
         {responseData.length > 10 && (
-          <div className="px-3 py-2 text-xs text-muted-foreground border-t text-center bg-muted/20">
-            ... y {responseData.length - 10} registros más
+          <div className="px-3 py-2 text-xs text-muted-foreground border-t bg-muted/20 flex items-center justify-between">
+            <span className="text-center flex-1">
+              ... y {responseData.length - 10} registros más
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFullDataModal(true)}
+              className="h-6 px-2 text-xs border-border hover:bg-muted/50"
+            >
+              <Maximize2 className="w-3 h-3 mr-1" />
+              Ver Todos
+            </Button>
           </div>
         )}
       </div>
@@ -293,68 +360,64 @@ export default function ChatResponse({
               const columnWidths = calculateColumnWidths();
               
               return (
-                <div className={`${needsHorizontalScroll ? 'overflow-x-auto' : 'w-full'}`}>
-                  <div className={`${needsHorizontalScroll ? 'min-w-full inline-block align-middle' : 'w-full'}`}>
-                    <div className="overflow-hidden">
-                      <Table className={needsHorizontalScroll ? 'min-w-full' : 'w-full'}>
-                        <TableHeader>
-                          <TableRow>
-                            {headers.map((header) => (
-                              <TableHead 
-                                key={header} 
-                                className="font-medium text-xs px-3 py-2 whitespace-nowrap bg-muted/50"
-                                style={{ 
-                                  width: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto',
-                                  minWidth: needsHorizontalScroll ? `${columnWidths[header]}px` : 'auto'
-                                }}
-                              >
-                                {header}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {responseAffectedRecords.slice(0, 3).map((row, index) => (
-                            <TableRow key={index} className="hover:bg-muted/30">
-                              {Object.entries(row).map(([key, value], cellIndex) => (
-                                <TableCell 
-                                  key={cellIndex} 
-                                  className="text-xs px-3 py-2 whitespace-nowrap"
-                                  style={{ 
-                                    width: needsHorizontalScroll ? `${columnWidths[key]}px` : 'auto',
-                                    minWidth: needsHorizontalScroll ? `${columnWidths[key]}px` : 'auto'
-                                  }}
-                                >
-                                  {value !== null && value !== undefined ? (
-                                    key.toLowerCase().includes('password') ? (
-                                      <div 
-                                        className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" 
-                                        title={String(value)}
-                                      >
-                                        {String(value)}
-                                      </div>
-                                    ) : (
-                                      <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(value)}>
-                                        {String(value)}
-                                      </div>
-                                    )
-                                  ) : '-'}
-                                </TableCell>
-                              ))}
-                            </TableRow>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-max border-collapse">
+                    <thead>
+                      <tr className="border-b border-border">
+                        {headers.map((header) => (
+                          <th 
+                            key={header} 
+                            className="font-medium text-xs px-3 py-2 whitespace-nowrap bg-muted/50 text-left"
+                            style={{ 
+                              width: `${columnWidths[header]}px`,
+                              minWidth: `${columnWidths[header]}px`
+                            }}
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {responseAffectedRecords.slice(0, 3).map((row, index) => (
+                        <tr key={index} className="border-b border-border hover:bg-muted/30">
+                          {Object.entries(row).map(([key, value], cellIndex) => (
+                            <td 
+                              key={cellIndex} 
+                              className="text-xs px-3 py-2 whitespace-nowrap"
+                              style={{ 
+                                width: `${columnWidths[key]}px`,
+                                minWidth: `${columnWidths[key]}px`
+                              }}
+                            >
+                              {value !== null && value !== undefined ? (
+                                key.toLowerCase().includes('password') ? (
+                                  <div 
+                                    className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" 
+                                    title={String(value)}
+                                  >
+                                    {String(value)}
+                                  </div>
+                                ) : (
+                                  <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(value)}>
+                                    {String(value)}
+                                  </div>
+                                )
+                              ) : '-'}
+                            </td>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               );
             })()}
             {responseAffectedRecords.length > 3 && (
               <div className="px-3 py-2 text-xs text-muted-foreground border-t text-center bg-muted/20">
                 ... y {responseAffectedRecords.length - 3} registros más
-              </div>
-            )}
+                </div>
+              )}
           </div>
         </div>
       )}
@@ -437,6 +500,83 @@ export default function ChatResponse({
             {responseType === 'select' ? 'Resultados' : 'Tabla actualizada'}
           </h4>
           {renderDataTable()}
+        </div>
+      )}
+
+      {/* Modal para mostrar todos los registros */}
+      {showFullDataModal && responseData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg border border-border shadow-xl max-w-7xl w-full max-h-[90vh] flex flex-col">
+            {/* Header del modal */}
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div>
+                <h3 className="font-semibold text-foreground text-lg">Todos los Registros</h3>
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {responseData.length} registros de la consulta
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFullDataModal(false)}
+                className="h-8 w-8 p-0 hover:bg-muted/50"
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {/* Contenido del modal con scroll */}
+            <div className="flex-1 overflow-auto p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max border-collapse">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {headers.map((header) => (
+                        <th 
+                          key={header} 
+                          className="font-medium text-xs px-3 py-2 whitespace-nowrap bg-muted/50 text-left sticky top-0"
+                        >
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {responseData.map((row, index) => (
+                      <tr key={index} className="border-b border-border hover:bg-muted/30">
+                        {headers.map((header) => (
+                          <td 
+                            key={header} 
+                            className="text-xs px-3 py-2 whitespace-nowrap"
+                          >
+                            {row[header] !== null && row[header] !== undefined ? (
+                              header.toLowerCase().includes('password') ? (
+                                <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(row[header])}>
+                                  {String(row[header])}
+                                </div>
+                              ) : (
+                                <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={String(row[header])}>
+                                  {String(row[header])}
+                                </div>
+                              )
+                            ) : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            {/* Footer del modal */}
+            <div className="p-4 border-t border-border bg-muted/20">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Total: {responseData.length} registros</span>
+                <span>Consulta ejecutada exitosamente</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

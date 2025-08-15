@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { 
   Bell, 
   CheckCircle, 
@@ -34,7 +35,7 @@ export default function Notifications() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleLogout = () => {
-    window.location.href = '/logout';
+    router.post('/logout');
   };
 
   // Mock data - en una implementación real esto vendría de una API
