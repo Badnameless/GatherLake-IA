@@ -5,11 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Connection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Mcp\NL2SQLTool;
 use App\Mcp\ExecutorTool;
-use Illuminate\Support\Facades\DB; // Added DB facade
+use Illuminate\Support\Facades\DB;
 
 class NL2SQLController extends Controller
 {
@@ -22,18 +21,9 @@ class NL2SQLController extends Controller
 
     public function store(Request $request, NL2SQLTool $nl2sql, ExecutorTool $executor)
     {
-        // Debug logs de autenticación
-        Log::info('=== AUTENTICACIÓN DEBUG ===');
-        Log::info('Auth::check(): ' . (Auth::check() ? 'true' : 'false'));
-        Log::info('Auth::id(): ' . Auth::id());
-        Log::info('Auth::user(): ' . (Auth::user() ? 'Usuario encontrado' : 'Usuario NULL'));
-        Log::info('Session ID: ' . $request->session()->getId());
-        Log::info('Request headers: ' . json_encode($request->headers->all()));
-        Log::info('Request cookies: ' . json_encode($request->cookies->all()));
+        set_time_limit(60); // 60 seconds max
         
-        // Verificación de seguridad
         if (!Auth::check() || !Auth::user()) {
-            \Log::error('Usuario no autenticado en NL2SQL store');
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Usuario no autenticado'], 401);
             }
@@ -44,130 +34,116 @@ class NL2SQLController extends Controller
             'query' => 'required|string|max:255',
         ]);
 
-        // Debug logs
-        Log::info('NL2SQL store method called', [
-            'user_id' => Auth::id(),
-            'user_authenticated' => Auth::check(),
-            'request_data' => $request->all()
-        ]);
-
-        // Get the active connection for the authenticated user
-        $connection = Connection::getActiveForUser(Auth::id());
-        
-        Log::info('Active connection result', [
-            'connection' => $connection,
-            'connection_id' => $connection ? $connection->id : null,
-            'connection_name' => $connection ? $connection->name : null,
-            'is_active' => $connection ? $connection->is_active : null,
-            'user_id' => Auth::id(),
-            'all_user_connections' => Auth::user()->connections()->get(['id', 'name', 'driver', 'is_active'])
-        ]);
-        
-        if (!$connection) {
-            Log::error('No active connection found for user', [
-                'user_id' => Auth::id(),
-                'total_connections' => Auth::user()->connections()->count(),
-                'all_connections' => Auth::user()->connections()->get(['id', 'name', 'is_active'])
-            ]);
+        try {
+            $connection = Connection::getActiveForUser(Auth::id());
             
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.'], 400);
+            if (!$connection) {
+                
+                if ($request->wantsJson()) {
+                    return response()->json(['error' => 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.'], 400);
+                }
+                return back()->with('error', 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.');
             }
-            return back()->with('error', 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.');
-        }
 
-        // Force the use of the active connection instead of default
-        Log::info('Forcing use of active connection', [
-            'connection_id' => $connection->id,
-            'driver' => $connection->driver,
-            'database' => $connection->database
-        ]);
-
-        $sql = $nl2sql->generate($connection, $request->input('query'));
-        
-        // Check if it's an UPDATE or DELETE query that needs confirmation
-        $trimmedSql = strtolower(trim($sql));
-        if (str_starts_with($trimmedSql, 'update') || str_starts_with($trimmedSql, 'delete')) {
-            // Get affected records for confirmation
-            $affectedRecords = $executor->getAffectedRecords($sql, $connection);
+            $sql = $nl2sql->generate($connection, $request->input('query'));
             
-            if ($request->wantsJson()) {
-                return response()->json([
+            $trimmedSql = strtolower(trim($sql));
+            if (str_starts_with($trimmedSql, 'update') || str_starts_with($trimmedSql, 'delete')) {
+                $affectedRecords = $executor->getAffectedRecords($sql, $connection);
+                
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'pendingQuery' => [
+                            'sql' => $sql,
+                            'type' => str_starts_with($trimmedSql, 'update') ? 'update' : 'delete',
+                            'affectedRecords' => $affectedRecords,
+                            'affectedCount' => count($affectedRecords)
+                        ]
+                    ]);
+                }
+                
+                return Inertia::render('NL2SQL/Create', [
+                    'connections' => Auth::user()->connections,
                     'pendingQuery' => [
                         'sql' => $sql,
                         'type' => str_starts_with($trimmedSql, 'update') ? 'update' : 'delete',
                         'affectedRecords' => $affectedRecords,
                         'affectedCount' => count($affectedRecords)
-                    ]
+                    ],
                 ]);
             }
-            
-            return Inertia::render('NL2SQL/Create', [
-                'connections' => Auth::user()->connections,
-                'pendingQuery' => [
-                    'sql' => $sql,
-                    'type' => str_starts_with($trimmedSql, 'update') ? 'update' : 'delete',
-                    'affectedRecords' => $affectedRecords,
-                    'affectedCount' => count($affectedRecords)
-                ],
-            ]);
-        }
 
-        // Execute SELECT or INSERT directly
-        $result = $executor->execute($sql, $connection);
+            $result = $executor->execute($sql, $connection);
 
-        // Determine the type of query
-        $queryType = 'select'; // default
-        if (str_starts_with($trimmedSql, 'insert')) {
-            $queryType = 'insert';
-        } elseif (str_starts_with($trimmedSql, 'update')) {
-            $queryType = 'update';
-        } elseif (str_starts_with($trimmedSql, 'delete')) {
-            $queryType = 'delete';
-        }
-
-        // Check if it's a success response (INSERT/UPDATE/DELETE) or a SELECT result
-        if (is_array($result) && isset($result[0]) && is_array($result[0]) && isset($result[0]['success'])) {
-            $affectedRows = 0;
-            if (isset($result[0]['affected_rows'])) {
-                $affectedRows = $result[0]['affected_rows'];
+            $queryType = 'select'; // default
+            if (str_starts_with($trimmedSql, 'insert')) {
+                $queryType = 'insert';
+            } elseif (str_starts_with($trimmedSql, 'update')) {
+                $queryType = 'update';
+            } elseif (str_starts_with($trimmedSql, 'delete')) {
+                $queryType = 'delete';
             }
-            
-            // For INSERT operations, get the updated table
-            $updatedData = null;
-            if ($queryType === 'insert') {
-                try {
-                    if ($connection) {
-                        // Configure dynamic connection for this query
-                        $connectionConfig = [
-                            'driver' => $connection->driver,
-                            'host' => $connection->host,
-                            'port' => $connection->port,
-                            'database' => $connection->database,
-                            'username' => $connection->username,
-                            'password' => $connection->password,
-                        ];
-                        
-                        config(['database.connections.temp_insert' => $connectionConfig]);
-                        DB::purge('temp_insert');
-                        
-                        $updatedData = DB::connection('temp_insert')->select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
-                    } else {
-                        $updatedData = DB::select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
-                    }
-                } catch (\Exception $e) {
-                    // If we can't get the updated table, continue without it
-                    $updatedData = null;
+
+            if (is_array($result) && isset($result[0]) && is_array($result[0]) && isset($result[0]['success'])) {
+                $affectedRows = 0;
+                if (isset($result[0]['affected_rows'])) {
+                    $affectedRows = $result[0]['affected_rows'];
                 }
-            }
-            
-            if ($request->wantsJson()) {
-                return response()->json([
+                
+                $updatedData = null;
+                if ($queryType === 'insert') {
+                    try {
+                        if ($connection) {
+                            // Configure dynamic connection for this query
+                            $connectionConfig = [
+                                'driver' => $connection->driver,
+                                'host' => $connection->host,
+                                'port' => $connection->port,
+                                'database' => $connection->database,
+                                'username' => $connection->username,
+                                'password' => $connection->password,
+                            ];
+                            
+                            config(['database.connections.temp_insert' => $connectionConfig]);
+                            DB::purge('temp_insert');
+                            
+                            $updatedData = DB::connection('temp_insert')->select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                        } else {
+                            $updatedData = DB::select('SELECT * FROM users ORDER BY created_at DESC LIMIT 10');
+                        }
+                    } catch (\Exception $e) {
+                        $updatedData = null;
+                    }
+                }
+                
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'result' => [
+                            'sql' => $sql,
+                            'data' => $updatedData ?: $result,
+                            'type' => $queryType,
+                            'affected_rows' => $affectedRows
+                        ]
+                    ]);
+                }
+                
+                return Inertia::render('NL2SQL/Create', [
+                    'connections' => Auth::user()->connections,
                     'result' => [
                         'sql' => $sql,
                         'data' => $updatedData ?: $result,
                         'type' => $queryType,
                         'affected_rows' => $affectedRows
+                    ],
+                ]);
+            }
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'result' => [
+                        'sql' => $sql,
+                        'data' => $result,
+                        'type' => 'select'
                     ]
                 ]);
             }
@@ -176,32 +152,18 @@ class NL2SQLController extends Controller
                 'connections' => Auth::user()->connections,
                 'result' => [
                     'sql' => $sql,
-                    'data' => $updatedData ?: $result,
-                    'type' => $queryType,
-                    'affected_rows' => $affectedRows
-                ],
-            ]);
-        }
-
-        // For SELECT queries, return the result with SQL
-        if ($request->wantsJson()) {
-            return response()->json([
-                'result' => [
-                    'sql' => $sql,
                     'data' => $result,
                     'type' => 'select'
-                ]
+                ],
             ]);
+            
+        } catch (\Exception $e) {
+            
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Error procesando la consulta: ' . $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Error procesando la consulta: ' . $e->getMessage());
         }
-        
-        return Inertia::render('NL2SQL/Create', [
-            'connections' => Auth::user()->connections,
-            'result' => [
-                'sql' => $sql,
-                'data' => $result,
-                'type' => 'select'
-            ],
-        ]);
     }
 
     public function confirm(Request $request, ExecutorTool $executor)

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -191,16 +190,13 @@ class UserController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        Log::info('updateProfile called', ['request' => $request->all()]);
         
         $user = $request->user();
         
         if (!$user) {
-            Log::warning('updateProfile: User not authenticated');
             return response()->json(['error' => 'Usuario no autenticado'], 401);
         }
 
-        Log::info('updateProfile: User authenticated', ['user_id' => $user->id]);
 
         $validRequest = $request->validate([
             'name' => 'required|string|max:255',
@@ -210,14 +206,12 @@ class UserController extends Controller
         try {
             $user->update($validRequest);
             
-            Log::info('updateProfile: Profile updated successfully', ['user_id' => $user->id]);
             
             return response()->json([
                 'message' => 'Perfil actualizado exitosamente',
                 'user' => $user->fresh()
             ], 200);
         } catch (\Throwable $th) {
-            Log::error('updateProfile: Error updating profile', ['error' => $th->getMessage(), 'user_id' => $user->id]);
             return response()->json([
                 'error' => $th->getMessage(),
                 'description' => 'Error al actualizar perfil.'
@@ -230,16 +224,13 @@ class UserController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        Log::info('updatePassword called', ['request' => $request->all()]);
         
         $user = $request->user();
         
         if (!$user) {
-            Log::warning('updatePassword: User not authenticated');
             return response()->json(['error' => 'Usuario no autenticado'], 401);
         }
 
-        Log::info('updatePassword: User authenticated', ['user_id' => $user->id]);
 
         $validRequest = $request->validate([
             'current_password' => 'required|string',
@@ -248,7 +239,6 @@ class UserController extends Controller
 
         // Verificar contraseña actual
         if (!Hash::check($validRequest['current_password'], $user->password)) {
-            Log::warning('updatePassword: Current password incorrect', ['user_id' => $user->id]);
             return response()->json([
                 'error' => 'La contraseña actual es incorrecta'
             ], 422);
@@ -259,13 +249,11 @@ class UserController extends Controller
                 'password' => Hash::make($validRequest['password'])
             ]);
             
-            Log::info('updatePassword: Password updated successfully', ['user_id' => $user->id]);
             
             return response()->json([
                 'message' => 'Contraseña actualizada exitosamente'
             ], 200);
         } catch (\Throwable $th) {
-            Log::error('updatePassword: Error updating password', ['error' => $th->getMessage(), 'user_id' => $user->id]);
             return response()->json([
                 'error' => $th->getMessage(),
                 'description' => 'Error al actualizar contraseña.'

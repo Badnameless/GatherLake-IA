@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Connection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use PDO;
 
@@ -16,7 +15,6 @@ class ConnectionController extends Controller
      */
     public function index()
     {
-        // Verificar si el usuario está autenticado
 
         if (request()->ajax() || request()->wantsJson()) {
             $connections = Auth::user()->connections;
@@ -24,18 +22,15 @@ class ConnectionController extends Controller
         }
 
         if (!Auth::check()) {
-            Log::info('Usuario no autenticado en ConnectionController@index');
             return response()->json([
                 'error' => 'Usuario no autenticado',
                 'message' => 'Unauthenticated.'
             ], 401);
         }
 
-        Log::info('Usuario autenticado:', ['user_id' => Auth::id()]);
         
         if (request()->wantsJson()) {
             $connections = Auth::user()->connections;
-            Log::info('Conexiones encontradas:', ['count' => $connections->count()]);
             return response()->json($connections);
         }
 
@@ -67,17 +62,14 @@ class ConnectionController extends Controller
             'password' => 'nullable|string|max:255',
         ]);
 
-        // Check if this will be the first connection
         $isFirstConnection = Auth::user()->connections()->count() === 0;
 
         $connection = Auth::user()->connections()->create($request->all());
 
-        // If this is the first connection, make it active
         if ($isFirstConnection) {
             $connection->activate();
         }
 
-        // Si es una petición API, devolver JSON
         if ($request->expectsJson() || $request->is('api/*')) {
             return response()->json([
                 'success' => true,
@@ -142,7 +134,6 @@ class ConnectionController extends Controller
     {
         $connection = Auth::user()->connections()->findOrFail($id);
         
-        // If this is the active connection, activate another one if available
         if ($connection->is_active) {
             $otherConnection = Auth::user()->connections()
                 ->where('id', '!=', $id)
@@ -189,7 +180,6 @@ class ConnectionController extends Controller
         try {
             $connection = Auth::user()->connections()->findOrFail($id);
             
-            // Get available extensions
             $extensions = get_loaded_extensions();
             $pdoDrivers = PDO::getAvailableDrivers();
             

@@ -69,7 +69,7 @@ export function useChat() {
     const savedSessions = localStorageUtils.load(storageKeys.CHAT_SESSIONS, mockSessions);
     const savedCurrentSession = localStorageUtils.load(storageKeys.CURRENT_SESSION, null);
     
-    return {
+    const initialData = {
       currentSession: savedCurrentSession || savedSessions.find(s => s.isActive) || null,
       sessions: savedSessions,
       userInfo: {
@@ -84,9 +84,18 @@ export function useChat() {
                         userInfo.plan === 'Premium' ? 1000 : 
                         userInfo.plan === 'Admin' ? 9999 : 100
       },
-      isLoading: true,
+      isLoading: false,
       error: null
     };
+    
+    console.log('Initial chat data loaded:', {
+      sessionsCount: initialData.sessions.length,
+      currentSessionId: initialData.currentSession?.id,
+      isLoading: initialData.isLoading,
+      userId: userInfo.id
+    });
+    
+    return initialData;
   });
 
   const [newMessage, setNewMessage] = useState<string>('');
@@ -105,47 +114,159 @@ export function useChat() {
   const [editingTitle, setEditingTitle] = useState<string>('');
   const [showActionModal, setShowActionModal] = useState<string | null>(null);
 
+  // Function to clear localStorage (useful for logout or reset)
+  const clearChatData = useCallback(() => {
+    localStorageUtils.remove(storageKeys.CHAT_SESSIONS);
+    localStorageUtils.remove(storageKeys.CURRENT_SESSION);
+    localStorageUtils.remove(storageKeys.USER_INFO);
+    
+    console.log('Cleared chat data for current user');
+  }, [storageKeys]);
+
+  // Function to clear ALL chat data (for logout)
+  const clearAllChatData = useCallback(() => {
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    
+    // Remove all gatherlake keys
+    allKeys.forEach(key => {
+      if (key.startsWith('gatherlake_')) {
+        localStorage.removeItem(key);
+        console.log('Removed all chat data:', key);
+      }
+    });
+    
+    // Also clear sessionStorage
+    const sessionKeys = Object.keys(sessionStorage);
+    sessionKeys.forEach(key => {
+      if (key.startsWith('gatherlake_')) {
+        sessionStorage.removeItem(key);
+        console.log('Removed session chat data:', key);
+      }
+    });
+    
+    console.log('Cleared ALL chat data from localStorage and sessionStorage');
+  }, []);
+
+  // Function to clear data from other users (security measure)
+  const clearOtherUsersData = useCallback(() => {
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    const currentUserId = userInfo.id || 'anonymous';
+    
+    console.log('Clearing other users data. Current user ID:', currentUserId);
+    console.log('All localStorage keys:', allKeys);
+    
+    // Find and remove keys from other users
+    let removedCount = 0;
+    allKeys.forEach(key => {
+      if (key.startsWith('gatherlake_')) {
+        if (!key.includes(currentUserId)) {
+          localStorage.removeItem(key);
+          console.log('Removed data from other user:', key);
+          removedCount++;
+        } else {
+          console.log('Keeping data for current user:', key);
+        }
+      }
+    });
+    
+    console.log(`Cleared ${removedCount} keys from other users`);
+    
+    // Also clear any sessionStorage that might exist
+    const sessionKeys = Object.keys(sessionStorage);
+    sessionKeys.forEach(key => {
+      if (key.startsWith('gatherlake_') && !key.includes(currentUserId)) {
+        sessionStorage.removeItem(key);
+        console.log('Removed session data from other user:', key);
+      }
+    });
+  }, [userInfo.id]);
+
+  // Function to recover data from localStorage if corrupted
+  const recoverChatData = useCallback(() => {
+    try {
+      console.log('Attempting to recover chat data...');
+      
+      // Try to load data with fallback to defaults
+      const savedSessions = localStorageUtils.load(storageKeys.CHAT_SESSIONS, mockSessions);
+      const savedCurrentSession = localStorageUtils.load(storageKeys.CURRENT_SESSION, null);
+      
+      // Validate data structure
+      const validSessions = Array.isArray(savedSessions) ? savedSessions : mockSessions;
+      const validCurrentSession = savedCurrentSession && typeof savedCurrentSession === 'object' ? savedCurrentSession : null;
+      
+      setChatData(prev => ({
+        ...prev,
+        currentSession: validCurrentSession || validSessions.find(s => s.isActive) || null,
+        sessions: validSessions,
+        isLoading: false,
+        error: null
+      }));
+      
+      console.log('Chat data recovered successfully');
+    } catch (error) {
+      console.error('Error recovering chat data:', error);
+      // Fallback to mock data
+      setChatData(prev => ({
+        ...prev,
+        currentSession: mockSessions.find(s => s.isActive) || null,
+        sessions: mockSessions,
+        isLoading: false,
+        error: null
+      }));
+    }
+  }, [storageKeys]);
+
   // Helper function to update chatData with new message
   const addMessageToCurrentSession = useCallback((message: ChatMessage) => {
-    setChatData(prev => {
-      if (!prev.currentSession) return prev;
-      
-      // Check if message already exists to prevent duplication
-      const messageExists = prev.currentSession.messages.some(
-        existingMessage => existingMessage.id === message.id
-      );
-      
-      if (messageExists) {
-        console.log('Message already exists, skipping:', message.id);
-        return prev; // Don't update if message already exists
-      }
-      
-      console.log('Adding new message to session:', {
-        sessionId: prev.currentSession.id,
-        messageId: message.id,
-        messageContent: message.content.substring(0, 50) + '...',
-        totalMessages: prev.currentSession.messages.length + 1
+    try {
+      setChatData(prev => {
+        if (!prev.currentSession) {
+          console.warn('No current session available, cannot add message');
+          return prev;
+        }
+        
+        // Check if message already exists to prevent duplication
+        const messageExists = prev.currentSession.messages.some(
+          existingMessage => existingMessage.id === message.id
+        );
+        
+        if (messageExists) {
+          console.log('Message already exists, skipping:', message.id);
+          return prev; // Don't update if message already exists
+        }
+        
+        console.log('Adding new message to session:', {
+          sessionId: prev.currentSession.id,
+          messageId: message.id,
+          messageContent: message.content.substring(0, 50) + '...',
+          totalMessages: prev.currentSession.messages.length + 1
+        });
+        
+        // Update current session with new message
+        const updatedCurrentSession = {
+          ...prev.currentSession,
+          messages: [...prev.currentSession.messages, message]
+        };
+        
+        // Update the session in the sessions array as well
+        const updatedSessions = prev.sessions.map(session =>
+          session.id === prev.currentSession.id
+            ? updatedCurrentSession
+            : session
+        );
+        
+        return {
+          ...prev,
+          currentSession: updatedCurrentSession,
+          sessions: updatedSessions
+        };
       });
-      
-      // Update current session with new message
-      const updatedCurrentSession = {
-        ...prev.currentSession,
-        messages: [...prev.currentSession.messages, message]
-      };
-      
-      // Update the session in the sessions array as well
-      const updatedSessions = prev.sessions.map(session =>
-        session.id === prev.currentSession.id
-          ? updatedCurrentSession
-          : session
-      );
-      
-      return {
-        ...prev,
-        currentSession: updatedCurrentSession,
-        sessions: updatedSessions
-      };
-    });
+    } catch (error) {
+      console.error('Error adding message to current session:', error);
+      // No fallar si hay error al agregar mensaje
+    }
   }, []);
 
   // Función para actualizar la conexión activa
@@ -241,10 +362,7 @@ export function useChat() {
   useEffect(() => {
     const loadChatData = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Data is already loaded from localStorage in the initial state
+        // Set loading to false immediately since data is already loaded from localStorage
         setChatData(prev => ({
           ...prev,
           isLoading: false,
@@ -275,10 +393,11 @@ export function useChat() {
           }
           setActiveConnection(null);
         }
-      } catch {
+      } catch (error) {
+        console.error('Error in loadChatData:', error);
         setChatData(prev => ({
           ...prev,
-           isLoading: false,
+          isLoading: false,
           error: 'Failed to load chat data'
         }));
       }
@@ -289,6 +408,9 @@ export function useChat() {
 
   // Clear other users data and reload when user changes
   useEffect(() => {
+    // Only run if userInfo.id is actually defined and different from current
+    if (!userInfo.id) return;
+    
     console.log('User changed, clearing other users data and reloading...');
     
     // Clear data from other users for security
@@ -298,7 +420,7 @@ export function useChat() {
     clearChatData();
     
     // Reset to initial state with new user data
-    const newStorageKeys = getStorageKeys(userInfo.id || 'anonymous');
+    const newStorageKeys = getStorageKeys(userInfo.id);
     const savedSessions = localStorageUtils.load(newStorageKeys.CHAT_SESSIONS, mockSessions);
     const savedCurrentSession = localStorageUtils.load(newStorageKeys.CURRENT_SESSION, null);
     
@@ -306,7 +428,7 @@ export function useChat() {
       currentSession: savedCurrentSession || savedSessions.find(s => s.isActive) || null,
       sessions: savedSessions,
       userInfo: {
-        id: userInfo.id || '1',
+        id: userInfo.id,
         name: userInfo.name,
         email: userInfo.email,
         avatar: userInfo.avatar,
@@ -331,7 +453,7 @@ export function useChat() {
     setEditingTitle('');
     setShowActionModal(null);
     
-  }, [userInfo.id]); // Se ejecuta cuando cambia el ID del usuario
+  }, [userInfo.id, clearOtherUsersData, clearChatData]); // Added dependencies
 
   // Send message with NL2SQL functionality
   const sendMessage = useCallback(async (message: string) => {
@@ -757,75 +879,6 @@ La consulta se ejecutó sin problemas.`,
     setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
     setPendingConfirmation(null);
   }, [pendingConfirmation]);
-
-  // Function to clear localStorage (useful for logout or reset)
-  const clearChatData = useCallback(() => {
-    localStorageUtils.remove(storageKeys.CHAT_SESSIONS);
-    localStorageUtils.remove(storageKeys.CURRENT_SESSION);
-    localStorageUtils.remove(storageKeys.USER_INFO);
-    
-    console.log('Cleared chat data for current user');
-  }, [storageKeys]);
-
-  // Function to clear ALL chat data (for logout)
-  const clearAllChatData = useCallback(() => {
-    // Get all localStorage keys
-    const allKeys = Object.keys(localStorage);
-    
-    // Remove all gatherlake keys
-    allKeys.forEach(key => {
-      if (key.startsWith('gatherlake_')) {
-        localStorage.removeItem(key);
-        console.log('Removed all chat data:', key);
-      }
-    });
-    
-    // Also clear sessionStorage
-    const sessionKeys = Object.keys(sessionStorage);
-    sessionKeys.forEach(key => {
-      if (key.startsWith('gatherlake_')) {
-        sessionStorage.removeItem(key);
-        console.log('Removed session chat data:', key);
-      }
-    });
-    
-    console.log('Cleared ALL chat data from localStorage and sessionStorage');
-  }, []);
-
-  // Function to clear data from other users (security measure)
-  const clearOtherUsersData = useCallback(() => {
-    // Get all localStorage keys
-    const allKeys = Object.keys(localStorage);
-    const currentUserId = userInfo.id || 'anonymous';
-    
-    console.log('Clearing other users data. Current user ID:', currentUserId);
-    console.log('All localStorage keys:', allKeys);
-    
-    // Find and remove keys from other users
-    let removedCount = 0;
-    allKeys.forEach(key => {
-      if (key.startsWith('gatherlake_')) {
-        if (!key.includes(currentUserId)) {
-          localStorage.removeItem(key);
-          console.log('Removed data from other user:', key);
-          removedCount++;
-        } else {
-          console.log('Keeping data for current user:', key);
-        }
-      }
-    });
-    
-    console.log(`Cleared ${removedCount} keys from other users`);
-    
-    // Also clear any sessionStorage that might exist
-    const sessionKeys = Object.keys(sessionStorage);
-    sessionKeys.forEach(key => {
-      if (key.startsWith('gatherlake_') && !key.includes(currentUserId)) {
-        sessionStorage.removeItem(key);
-        console.log('Removed session data from other user:', key);
-      }
-    });
-  }, [userInfo.id]);
 
   return {
     chatData,
