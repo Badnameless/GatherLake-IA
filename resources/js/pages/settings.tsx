@@ -220,7 +220,7 @@ export default function Settings() {
       <FrontendLayout userInfo={userInfo} activePage="settings" onLogout={handleLogout}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 pt-[40px]">
             <h1 className="text-3xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>
               Configuración
             </h1>

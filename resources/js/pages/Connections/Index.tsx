@@ -172,7 +172,7 @@ export default function ConnectionsIndex() {
       <FrontendLayout userInfo={userInfo} activePage="connections" onLogout={handleLogout}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 pt-[40px]">
             <div className="flex items-center justify-between">
           <div>
                 <h1 className="text-3xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>
