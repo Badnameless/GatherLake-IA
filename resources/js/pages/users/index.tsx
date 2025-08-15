@@ -37,14 +37,14 @@ export default function Users() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://127.0.0.1:8000/api/get/user/all');
+            const response = await axios.get('/api/get/user/all');
             const formattedUsers = response.data.map((user: any) => ({
                 ...user,
                 id: user.id,
                 name: user.name,
                 email: user.email,
                 role: user.roles?.[0]?.name || 'user',
-                status: user.status || 'active',
+                status: user.status || 'activo',
                 created_at: user.created_at,
                 last_login_at: user.last_login_at,
                 last_login_ip: user.last_login_ip
@@ -65,7 +65,7 @@ export default function Users() {
 
     const deleteUser = async (userId: number) => {
         try {
-            await axios.delete(`http://127.0.0.1:8000/api/delete/user/${userId}`);
+            await axios.delete(`/api/delete/user/${userId}`);
             toast.current?.show({
                 severity: 'success',
                 summary: 'Éxito',
@@ -204,7 +204,16 @@ export default function Users() {
             <ConfirmDialog />
             
             <div className="space-y-6 px-[16px] pt-[40px]">
-                <h1 className="text-2xl font-bold tracking-tight">Gestión de Usuarios</h1>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold tracking-tight">Gestión de Usuarios</h1>
+                    <Link href="/users/create">
+                        <Button 
+                            label="Crear Usuario" 
+                            icon="pi pi-plus" 
+                            className="bg-blue-600 border-blue-600 hover:bg-blue-700 hover:border-blue-700"
+                        />
+                    </Link>
+                </div>
                 
                 <div className="rounded-lg border border-gray-700 bg-gray-900 shadow-sm">
                     <GenericDataTable

@@ -3,6 +3,7 @@ export interface ChatMessage {
   content: string;
   author: 'user' | 'bot';
   timestamp: string;
+  isSpecialMessage?: boolean; // Para mensajes especiales que se renderizan como cards
   responseData?: {
     type: 'select' | 'insert' | 'update' | 'delete' | 'pending';
     sql: string;
@@ -27,7 +28,7 @@ export interface UserInfo {
   name: string;
   email: string;
   avatar: string;
-  plan: 'Free' | 'Pro' | 'Enterprise';
+  plan: 'Guest' | 'Premium' | 'Free' | 'Pro' | 'Enterprise';
   tokensRemaining: number;
   tokensResetTime: string;
   dailyTokenLimit: number;

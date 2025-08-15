@@ -20,6 +20,9 @@
     --techwave-main-color: #7c5fe3;
     --techwave-main-color1: #8768f8;
     --techwave-main-color2: #b7a4fb;
+    --techwave-success-color: #10b981;
+    --techwave-error-color: #ef4444;
+    --techwave-warning-color: #f59e0b;
 }
 * {
     /* margin: 0; */

@@ -157,3 +157,9 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Import Component Styles */
+@import './Components/Header.css';
+@import './Components/SideBar.css';
+@import './Components/Chat.css';
+@import './Components/styles.css';

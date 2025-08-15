@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => AdminMiddleware::class,
             'auth.required' => \App\Http\Middleware\RequireAuth::class,
+            'api.session' => \App\Http\Middleware\ApiWithSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

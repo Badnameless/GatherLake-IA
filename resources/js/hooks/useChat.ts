@@ -2,17 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChatMessage, ChatSession, UserInfo, ChatData } from '../types/chat';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
-import ChatResponse from '../components/chat-response';
 
-// Mock data - In real app, this would come from API
-const mockUserInfo: UserInfo = {
-  id: '1',
-  name: 'Caden Smith',
-  email: 'cadmail@gmail.com',
+// Default user info structure - will be populated from API
+const defaultUserInfo: UserInfo = {
+  id: '',
+  name: '',
+  email: '',
   avatar: './images/avatar.jpg',
   plan: 'Free',
-  tokensRemaining: 120,
-  tokensResetTime: '19 hours',
+  tokensRemaining: 0,
+  tokensResetTime: '24 hours',
   dailyTokenLimit: 200
 };
 
@@ -38,7 +37,7 @@ export const useChat = () => {
   const [chatData, setChatData] = useState<ChatData>({
     currentSession: null,
     sessions: [],
-    userInfo: mockUserInfo,
+    userInfo: defaultUserInfo,
     isLoading: true,
     error: null
   });
@@ -49,46 +48,77 @@ export const useChat = () => {
   const [showActionModal, setShowActionModal] = useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [activeConnection, setActiveConnection] = useState<any>(null);
+  const [activeConnection, setActiveConnection] = useState<unknown>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     sql: string;
     type: 'update' | 'delete';
-    affectedRecords: any[];
+    affectedRecords: unknown[];
     affectedCount: number;
   } | null>(null);
-
-  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
 
   // Load initial data and active connection
   useEffect(() => {
     const loadChatData = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Always try to get user info from API
+        const userResponse = await axios.get('/api/user/current');
+        const userData = userResponse.data;
+        
+        const userInfo: UserInfo = {
+          id: userData.user.id.toString(),
+          name: userData.user.name,
+          email: userData.user.email,
+          avatar: './images/avatar.jpg', // Default avatar path
+          plan: userData.plan,
+          tokensRemaining: userData.tokensRemaining,
+          tokensResetTime: userData.tokensResetTime,
+          dailyTokenLimit: userData.dailyTokenLimit
+        };
         
         const currentSession = mockSessions.find(session => session.isActive) || null;
         
         setChatData({
           currentSession,
           sessions: mockSessions,
-          userInfo: mockUserInfo,
+          userInfo: userInfo,
           isLoading: false,
           error: null
         });
 
-        // Get active connection
+        // Obtener la conexión activa de forma segura
         try {
-          const response = await axios.get('/connections/active');
-          setActiveConnection(response.data.connection);
-        } catch (error) {
-          console.log('No active connection found');
+          console.log('Intentando obtener conexión activa...');
+          const response = await axios.get('/api/connections/active');
+          console.log('Respuesta de conexión activa:', response);
+          console.log('Datos de conexión activa:', response.data);
+          console.log('Conexión activa:', response.data.connection);
+          
+          if (response.data.connection) {
+            setActiveConnection(response.data.connection);
+            console.log('Conexión activa establecida:', response.data.connection);
+          } else {
+            console.log('No hay conexión activa en la respuesta');
+            setActiveConnection(null);
+          }
+        } catch (connectionError) {
+          console.error('Error obteniendo conexión activa:', connectionError);
+          if (axios.isAxiosError(connectionError)) {
+            console.error('Error de Axios:', connectionError.response?.data);
+            console.error('Status:', connectionError.response?.status);
+            console.error('Headers:', connectionError.response?.headers);
+          }
+          setActiveConnection(null);
         }
-      } catch {
-        setChatData(prev => ({
-          ...prev,
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        // Set error state instead of fallback to mock data
+        setChatData({
+          currentSession: null,
+          sessions: [],
+          userInfo: defaultUserInfo,
           isLoading: false,
-          error: 'Failed to load chat data'
-        }));
+          error: 'Error al cargar datos del usuario'
+        });
       }
     };
 
@@ -131,7 +161,55 @@ export const useChat = () => {
 
   // Send message with NL2SQL functionality
   const sendMessage = useCallback(async (message: string) => {
-    if (!message.trim() || !activeConnection) return;
+    if (!message.trim()) return;
+
+    // Verificar si hay conexiones activas
+    if (!activeConnection) {
+      const noConnectionMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: `🚫 **No hay conexiones de base de datos configuradas**
+
+Para usar el asistente SQL, necesitas crear al menos una conexión a una base de datos.
+
+**📋 Pasos para configurar:**
+
+1. **Ve a Conexiones** en el sidebar izquierdo
+2. **Haz clic en "Nueva Conexión"**
+3. **Configura los datos** de tu base de datos:
+   • Tipo de base de datos (MySQL, PostgreSQL, etc.)
+   • Host y puerto
+   • Nombre de la base de datos
+   • Usuario y contraseña
+4. **Activa la conexión** una vez configurada
+
+**✅ Después de configurar:**
+Podrás hacer consultas SQL en lenguaje natural y el asistente te ayudará a generar consultas automáticamente.
+
+**🔗 Acceso directo:** [Ir a Conexiones](/connections)`,
+        author: 'bot',
+        timestamp: new Date().toISOString(),
+        isSpecialMessage: true // Marca especial para renderizar como card
+      };
+
+      setChatData(prev => {
+        if (!prev.currentSession) return prev;
+        return {
+          ...prev,
+          currentSession: {
+            ...prev.currentSession,
+            messages: [...prev.currentSession.messages, {
+              id: (Date.now() - 1).toString(),
+              content: message,
+              author: 'user',
+              timestamp: new Date().toISOString()
+            }, noConnectionMessage]
+          }
+        };
+      });
+
+      setNewMessage('');
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -165,7 +243,7 @@ export const useChat = () => {
 
         if (isConfirming) {
           // Execute the pending query
-          const response = await axios.post('/nl2sql/confirm', {
+          const response = await axios.post('/api/nl2sql/confirm', {
             sql: pendingConfirmation.sql,
             type: pendingConfirmation.type
           }, {
@@ -236,7 +314,7 @@ export const useChat = () => {
       }
 
       // Send to NL2SQL API (no need to send connection_id anymore)
-      const response = await axios.post('/nl2sql', {
+      const response = await axios.post('/api/nl2sql', {
         query: message
       }, {
         headers: {
@@ -260,7 +338,22 @@ export const useChat = () => {
         
         botResponse = {
           id: (Date.now() + 1).toString(),
-          content: `Consulta ${type.toUpperCase()} que requiere confirmación`,
+          content: `⚠️ **Consulta ${type.toUpperCase()} que requiere confirmación**
+
+**SQL generado:**
+\`\`\`sql
+${sql}
+\`\`\`
+
+**Registros que se verán afectados:** ${affectedCount}
+
+**Detalles de los registros:**
+${affectedRecords.map((record: Record<string, unknown>, index: number) => 
+  `${index + 1}. ${JSON.stringify(record, null, 2)}`
+).join('\n')}
+
+**Para confirmar:** Escribe "sí", "confirmar" o "aceptar"
+**Para cancelar:** Escribe "no" o "cancelar"`,
           author: 'bot',
           timestamp: new Date().toISOString(),
           responseData: {
@@ -274,23 +367,66 @@ export const useChat = () => {
         // Handle structured results (SELECT, UPDATE, DELETE, INSERT)
         const result = response.data.result;
         
-        botResponse = {
-          id: (Date.now() + 1).toString(),
-          content: `Consulta ${result.type.toUpperCase()} ejecutada`,
-          author: 'bot',
-          timestamp: new Date().toISOString(),
-          responseData: {
-            type: result.type,
-            sql: result.sql,
-            data: result.data,
-            affectedRows: result.affected_rows
-          }
-        };
+        if (result.type === 'select' && result.data && Array.isArray(result.data)) {
+          // Para consultas SELECT, mostrar los datos en formato tabla
+          const tableData = result.data;
+          const columns = tableData.length > 0 ? Object.keys(tableData[0]) : [];
+          
+          const tableContent = `📊 **Consulta SELECT ejecutada exitosamente**
+
+**SQL generado:**
+\`\`\`sql
+${result.sql}
+\`\`\`
+
+**Resultados (${tableData.length} registros):**
+\`\`\`
+${columns.join(' | ')}
+${'-'.repeat(columns.join(' | ').length)}
+${tableData.map((row: Record<string, unknown>) => 
+  columns.map(col => row[col] || '').join(' | ')
+).join('\n')}
+\`\`\``;
+          
+          botResponse = {
+            id: (Date.now() + 1).toString(),
+            content: tableContent,
+            author: 'bot',
+            timestamp: new Date().toISOString(),
+            responseData: {
+              type: result.type,
+              sql: result.sql,
+              data: result.data,
+              affectedRows: result.affected_rows
+            }
+          };
+        } else {
+          // Para otras consultas (INSERT, UPDATE, DELETE)
+          botResponse = {
+            id: (Date.now() + 1).toString(),
+            content: `✅ **Consulta ${result.type.toUpperCase()} ejecutada exitosamente**
+
+**SQL generado:**
+\`\`\`sql
+${result.sql}
+\`\`\`
+
+**Filas afectadas:** ${result.affected_rows || 0}`,
+            author: 'bot',
+            timestamp: new Date().toISOString(),
+            responseData: {
+              type: result.type,
+              sql: result.sql,
+              data: result.data,
+              affectedRows: result.affected_rows
+            }
+          };
+        }
       } else if (response.data.success) {
         // Handle success messages
         botResponse = {
           id: (Date.now() + 1).toString(),
-          content: response.data.success,
+          content: `✅ **${response.data.success}`,
           author: 'bot',
           timestamp: new Date().toISOString()
         };
@@ -298,7 +434,9 @@ export const useChat = () => {
         // Handle other responses
         botResponse = {
           id: (Date.now() + 1).toString(),
-          content: 'Consulta procesada correctamente.',
+          content: `✅ **Consulta procesada correctamente.**
+
+La consulta se ejecutó sin problemas.`,
           author: 'bot',
           timestamp: new Date().toISOString()
         };
@@ -315,10 +453,10 @@ export const useChat = () => {
         };
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       
-      const errorMessage = error.response?.data?.error || 'Error al procesar la consulta.';
+      const errorMessage = error instanceof Error ? error.message : 'Error al procesar la consulta.';
       
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -419,11 +557,6 @@ export const useChat = () => {
     setShowActionModal(sessionId);
   }, []);
 
-  // Hide action modal
-  const hideSessionActions = useCallback(() => {
-    setShowActionModal(null);
-  }, []);
-
   // Start editing session title
   const startEditingSession = useCallback((sessionId: string) => {
     const session = chatData.sessions.find(s => s.id === sessionId);
@@ -452,7 +585,7 @@ export const useChat = () => {
 
     setIsProcessing(true);
     try {
-      const response = await axios.post('/nl2sql/confirm', {
+      const response = await axios.post('/api/nl2sql/confirm', {
         sql: pendingConfirmation.sql,
         type: pendingConfirmation.type
       }, {
@@ -499,13 +632,11 @@ export const useChat = () => {
         };
       });
 
-      // Mark the pending confirmation as completed
-      setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
       setPendingConfirmation(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error confirming action:', error);
       
-      const errorMessage = error.response?.data?.error || 'Error al confirmar la acción.';
+      const errorMessage = error instanceof Error ? error.message : 'Error al confirmar la acción.';
       
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -550,8 +681,6 @@ export const useChat = () => {
       };
     });
 
-    // Mark the pending confirmation as completed
-    setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
     setPendingConfirmation(null);
   }, [pendingConfirmation]);
 

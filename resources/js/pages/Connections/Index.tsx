@@ -1,27 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Database, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  CheckCircle, 
-  Circle, 
-  Settings,
-  Zap,
-  Shield,
-  Globe
-} from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Plus, Database, Settings, Trash2, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import { useChat } from '../../hooks/useChat';
+import FrontendLayout from '../../components/FrontendLayout';
 import axios from 'axios';
 
 interface Connection {
   id: number;
   name: string;
-  driver: string;
   host: string;
   port: string;
   database: string;
@@ -31,10 +17,11 @@ interface Connection {
   updated_at: string;
 }
 
-export default function Index() {
+export default function ConnectionsIndex() {
+  const { chatData } = useChat();
+  const { userInfo } = chatData;
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activating, setActivating] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadConnections();
@@ -42,306 +29,351 @@ export default function Index() {
 
   const loadConnections = async () => {
     try {
-      const response = await axios.get('/connections');
-      setConnections(response.data);
+      console.log('Cargando conexiones...');
+      const response = await axios.get('/api/connections');
+      console.log('Response completa:', response);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (response.status === 200) {
+        const data = response.data;
+        console.log('Datos recibidos:', data);
+        console.log('Tipo de datos:', typeof data);
+        console.log('Es array:', Array.isArray(data));
+        
+        if (Array.isArray(data)) {
+          setConnections(data);
+        } else {
+          console.error('La respuesta no es un array:', data);
+          setConnections([]);
+        }
+      } else {
+        console.error('Error en response:', response.status, response.statusText);
+        console.error('Error response body:', response.data);
+        setConnections([]);
+      }
     } catch (error) {
       console.error('Error loading connections:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Error de Axios:', error.response?.data);
+        console.error('Status:', error.response?.status);
+      }
+      setConnections([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const activateConnection = async (connectionId: number) => {
-    setActivating(connectionId);
+  const toggleConnectionStatus = async (connectionId: number) => {
     try {
-      await axios.post(`/connections/${connectionId}/activate`);
-      await loadConnections(); // Reload to get updated state
-    } catch (error) {
-      console.error('Error activating connection:', error);
-    } finally {
-      setActivating(null);
-    }
-  };
+      const response = await axios.post(`/api/connections/${connectionId}/activate`, {}, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+      });
 
-  const deleteConnection = async (connectionId: number) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta conexión?')) {
-      try {
-        await axios.delete(`/connections/${connectionId}`);
-        await loadConnections();
-      } catch (error) {
-        console.error('Error deleting connection:', error);
+      if (response.status === 200) {
+        // Recargar las conexiones para reflejar el cambio
+        loadConnections();
+      }
+    } catch (error) {
+      console.error('Error toggling connection:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Error de Axios:', error.response?.data);
+        console.error('Status:', error.response?.status);
       }
     }
   };
 
-  const getDriverIcon = (driver: string) => {
-    switch (driver.toLowerCase()) {
-      case 'mysql':
-        return <Database className="w-5 h-5 text-blue-500" />;
-      case 'pgsql':
-      case 'postgresql':
-        return <Database className="w-5 h-5 text-indigo-500" />;
-      case 'sqlite':
-        return <Database className="w-5 h-5 text-green-500" />;
-      case 'sqlsrv':
-        return <Database className="w-5 h-5 text-red-500" />;
-      default:
-        return <Database className="w-5 h-5 text-gray-500" />;
+  const deleteConnection = async (connectionId: number) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta conexión?')) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(`/api/connections/${connectionId}`, {
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+      });
+
+      if (response.status === 200) {
+        loadConnections();
+      }
+    } catch (error) {
+      console.error('Error deleting connection:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Error de Axios:', error.response?.data);
+        console.error('Status:', error.response?.status);
+      }
     }
   };
 
-  const getDriverColor = (driver: string) => {
-    switch (driver.toLowerCase()) {
-      case 'mysql':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'pgsql':
-      case 'postgresql':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'sqlite':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'sqlsrv':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const handleLogout = () => {
+    window.location.href = '/logout';
   };
 
-  if (loading) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (isLoading) {
     return (
-      <AppLayout>
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
-              ))}
+      <>
+        <Head title="Conexiones - GatherLake AI" />
+        <FrontendLayout userInfo={userInfo} activePage="connections" onLogout={handleLogout}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4" style={{ color: 'var(--techwave-body-color)' }}>Cargando conexiones...</p>
             </div>
           </div>
-        </div>
-      </AppLayout>
+        </FrontendLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
-      <Head title="Conexiones" />
+    <>
+      <Head title="Conexiones - GatherLake AI" />
       
-      <div className="p-6 mx-auto w-full">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Mis Conexiones
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Gestiona tus conexiones de base de datos y configura cuál está activa
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <Link href="/connections/create">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Plus className="w-4 h-4 mr-2" />
+      <FrontendLayout userInfo={userInfo} activePage="connections" onLogout={handleLogout}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>
+                  Conexiones de Base de Datos
+                </h1>
+                <p className="mt-2" style={{ color: 'var(--techwave-body-color)' }}>
+                  Gestiona tus conexiones a bases de datos para el asistente SQL
+                </p>
+              </div>
+              <Link
+                href="/connections/create"
+                className="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--techwave-main-color)',
+                  color: 'white'
+                }}
+              >
+                <Plus className="h-5 w-5 mr-2" />
                 Nueva Conexión
-              </Button>
-            </Link>
+              </Link>
+            </div>
           </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
               <div className="flex items-center">
-                <Database className="w-8 h-8 text-blue-500 mr-4" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Conexiones
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {connections.length}
-                  </p>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                  <Database className="h-6 w-6" style={{ color: 'var(--techwave-main-color)' }} />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium" style={{ color: 'var(--techwave-body-color)' }}>Total Conexiones</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>{connections.length}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-6">
+            <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
               <div className="flex items-center">
-                <Zap className="w-8 h-8 text-green-500 mr-4" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Conexión Activa
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                  <CheckCircle className="h-6 w-6" style={{ color: 'var(--techwave-success-color)' }} />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium" style={{ color: 'var(--techwave-body-color)' }}>Activas</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>
                     {connections.filter(c => c.is_active).length}
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-6">
+            <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
               <div className="flex items-center">
-                <Shield className="w-8 h-8 text-purple-500 mr-4" />
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Tipos de BD
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {new Set(connections.map(c => c.driver)).size}
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                  <XCircle className="h-6 w-6" style={{ color: 'var(--techwave-error-color)' }} />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium" style={{ color: 'var(--techwave-body-color)' }}>Inactivas</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>
+                    {connections.filter(c => !c.is_active).length}
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Connections Grid */}
-        {connections.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Database className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No tienes conexiones
+          {/* Connections List */}
+          {connections.length === 0 ? (
+            <div className="text-center py-16">
+              <Database className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--techwave-body-color)' }} />
+              <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>
+                No hay conexiones configuradas
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Crea tu primera conexión para empezar a usar el asistente SQL
+              <p className="mb-6" style={{ color: 'var(--techwave-body-color)' }}>
+                Crea tu primera conexión para comenzar a usar el asistente SQL
               </p>
-              <Link href="/connections/create">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear Primera Conexión
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {connections.map((connection) => (
-              <Card 
-                key={connection.id} 
-                className={`relative transition-all duration-200 hover:shadow-lg ${
-                  connection.is_active 
-                    ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20' 
-                    : 'hover:ring-2 hover:ring-gray-300'
-                }`}
+              <Link
+                href="/connections/create"
+                className="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--techwave-main-color)',
+                  color: 'white'
+                }}
               >
-                {/* Active Badge */}
-                {connection.is_active && (
-                  <div className="absolute -top-2 -right-2">
-                    <Badge className="bg-green-500 text-white px-3 py-1">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Activa
-                    </Badge>
-                  </div>
-                )}
-
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      {getDriverIcon(connection.driver)}
+                <Plus className="h-5 w-5 mr-2" />
+                Crear Primera Conexión
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {connections.map((connection) => (
+                <div
+                key={connection.id} 
+                  className="rounded-2xl p-6 transition-all duration-200 hover:shadow-lg"
+                  style={{ 
+                    backgroundColor: 'var(--techwave-some-r-bg-color)', 
+                    border: connection.is_active 
+                      ? '2px solid var(--techwave-main-color)' 
+                      : '1px solid var(--techwave-border-color)',
+                    boxShadow: connection.is_active 
+                      ? '0 8px 25px rgba(59, 130, 246, 0.25), 0 4px 6px -1px rgba(0, 0, 0, 0.1)' 
+                      : 'none',
+                    transform: connection.is_active ? 'scale(1.02)' : 'scale(1)'
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center">
+                      <Database className="h-5 w-5 mr-3" style={{ color: 'var(--techwave-main-color)' }} />
                       <div>
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h3 className="font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
                           {connection.name}
-                        </CardTitle>
-                        <Badge 
-                          variant="outline" 
-                          className={`mt-1 ${getDriverColor(connection.driver)}`}
+                        </h3>
+                        <div className="flex items-center mt-1">
+                          <span
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: connection.is_active 
+                                ? 'var(--techwave-main-color)' 
+                                : 'var(--techwave-some-a-bg-color)',
+                              color: connection.is_active 
+                                ? 'white' 
+                                : 'var(--techwave-body-color)',
+                              border: connection.is_active 
+                                ? 'none' 
+                                : '1px solid var(--techwave-border-color)'
+                            }}
                         >
-                          {connection.driver.toUpperCase()}
-                        </Badge>
+                            {connection.is_active ? '⭐ Activa' : 'Inactiva'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => toggleConnectionStatus(connection.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ 
+                          color: connection.is_active 
+                            ? 'rgba(255, 255, 255, 0.8)' 
+                            : 'var(--techwave-body-color)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = connection.is_active 
+                            ? 'rgba(255, 255, 255, 0.1)' 
+                            : 'var(--techwave-some-a-bg-color)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        title={connection.is_active ? 'Desactivar' : 'Activar'}
+                      >
+                        {connection.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                      <Link
+                        href={`/connections/${connection.id}/edit`}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ 
+                          color: 'var(--techwave-body-color)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--techwave-some-a-bg-color)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        title="Editar"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={() => deleteConnection(connection.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ 
+                          color: 'var(--techwave-error-color)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--techwave-error-color)';
+                          e.currentTarget.style.color = 'white';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = 'var(--techwave-error-color)';
+                        }}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--techwave-body-color)' }}>Host:</span>
+                        <span className="ml-2" style={{ color: 'var(--techwave-heading-color)' }}>{connection.host}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--techwave-body-color)' }}>Puerto:</span>
+                        <span className="ml-2" style={{ color: 'var(--techwave-heading-color)' }}>{connection.port}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--techwave-body-color)' }}>Base de Datos:</span>
+                        <span className="ml-2" style={{ color: 'var(--techwave-heading-color)' }}>{connection.database}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: 'var(--techwave-body-color)' }}>Usuario:</span>
+                        <span className="ml-2" style={{ color: 'var(--techwave-heading-color)' }}>{connection.username}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3" style={{ borderTop: '1px solid var(--techwave-border-color)' }}>
+                      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--techwave-body-color)' }}>
+                        <span>Creada: {formatDate(connection.created_at)}</span>
+                        <span>Actualizada: {formatDate(connection.updated_at)}</span>
                       </div>
                     </div>
                   </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Connection Details */}
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <Globe className="w-4 h-4 mr-2" />
-                      {connection.host}:{connection.port}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <Database className="w-4 h-4 mr-2" />
-                      {connection.database}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <Settings className="w-4 h-4 mr-2" />
-                      {connection.username}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex space-x-2">
-                                             {!connection.is_active && (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => activateConnection(connection.id)}
-                           disabled={activating === connection.id}
-                           className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
-                         >
-                           {activating === connection.id ? (
-                             <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                           ) : (
-                             <CheckCircle className="w-4 h-4 mr-1" />
-                           )}
-                           <span>Activar</span>
-                         </Button>
-                       )}
-                      
-                      <Link href={`/connections/${connection.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <Edit className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                      </Link>
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteConnection(connection.id)}
-                      className="text-red-600 border-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Help Section */}
-        {connections.length > 0 && (
-          <Card className="mt-8 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    ¿Cómo funciona?
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Solo una conexión puede estar activa a la vez. La conexión activa es la que se usará 
-                    automáticamente en el asistente SQL. Haz clic en "Activar" para cambiar la conexión activa.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </AppLayout>
+              ))}
+            </div>
+          )}
+        </div>
+      </FrontendLayout>
+    </>
   );
 }

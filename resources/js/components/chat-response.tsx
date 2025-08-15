@@ -1,289 +1,358 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, AlertTriangle, Database, Code } from 'lucide-react';
+import { ChatMessage } from '../types/chat';
+import { Database, ArrowRight, CheckCircle, Settings, Link, AlertTriangle, CheckCircle2, Table, FileText } from 'lucide-react';
 
 interface ChatResponseProps {
-  type: 'select' | 'insert' | 'update' | 'delete' | 'pending';
-  sql: string;
-  data?: any[];
-  affectedRows?: number;
-  affectedRecords?: any[];
-  affectedCount?: number;
-  onConfirm?: () => void;
-  onCancel?: () => void;
-  isConfirming?: boolean;
-  isCompleted?: boolean; // New prop to track if action is completed
+  message: ChatMessage;
 }
 
-export default function ChatResponse({
-  type,
-  sql,
-  data,
-  affectedRows,
-  affectedRecords,
-  affectedCount,
-  onConfirm,
-  onCancel,
-  isConfirming = false,
-  isCompleted = false
-}: ChatResponseProps) {
-  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
-
-  const getTypeIcon = () => {
-    switch (type) {
-      case 'select':
-        return <Database className="w-5 h-5 text-blue-500" />;
-      case 'insert':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'update':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-      case 'delete':
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      case 'pending':
-        return <AlertTriangle className="w-5 h-5 text-orange-500" />;
-      default:
-        return <Database className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  const getTypeTitle = () => {
-    switch (type) {
-      case 'select':
-        return 'Consulta SELECT ejecutada';
-      case 'insert':
-        return 'Usuario insertado correctamente';
-      case 'update':
-        return 'Registros actualizados correctamente';
-      case 'delete':
-        return 'Registros eliminados correctamente';
-      case 'pending':
-        return 'Confirmación requerida';
-      default:
-        return 'Consulta ejecutada';
-    }
-  };
-
-  const getTypeDescription = () => {
-    switch (type) {
-      case 'select':
-        return `Se encontraron ${data?.length || 0} registros`;
-      case 'insert':
-        return `${affectedRows || 0} registro(s) insertado(s)`;
-      case 'update':
-        return `${affectedRows || 0} registro(s) actualizado(s)`;
-      case 'delete':
-        return `${affectedRows || 0} registro(s) eliminado(s)`;
-      case 'pending':
-        return `Esta operación afectará a ${affectedCount || 0} registro(s)`;
-      default:
-        return 'Operación completada';
-    }
-  };
-
-  const renderDataTable = () => {
-    if (!data || data.length === 0) {
-      return (
-        <div className="text-center py-4 text-muted-foreground">
-          <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No se encontraron registros</p>
-        </div>
-      );
-    }
-
-    const headers = Object.keys(data[0]);
-
+export default function ChatResponse({ message }: ChatResponseProps) {
+  // Si es un mensaje especial, renderizar como card visual
+  if (message.isSpecialMessage) {
     return (
-      <div className="bg-card rounded-md border border-border overflow-hidden">
-        <div className="max-h-96 overflow-y-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {headers.map((header) => (
-                  <TableHead key={header} className="font-medium text-xs px-2 py-1">
-                    {header}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.slice(0, 10).map((row, index) => (
-                <TableRow key={index}>
-                  {headers.map((header) => (
-                    <TableCell key={header} className="text-xs px-2 py-1">
-                      {row[header] !== null && row[header] !== undefined ? (
-                        header.toLowerCase().includes('password') ? (
-                          <div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap" title={String(row[header])}>
-                            {String(row[header])}
-                          </div>
-                        ) : (
-                          String(row[header])
-                        )
-                      ) : '-'}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {data.length > 10 && (
-            <div className="px-2 py-1 text-xs text-muted-foreground border-t text-center">
-              ... y {data.length - 10} registros más
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderSQLSection = () => (
-    <div className="bg-muted/50 rounded-lg p-3 border border-border">
-      <h4 className="font-medium text-foreground mb-2 flex items-center gap-2 text-sm">
-        <Code className="w-3 h-3 text-muted-foreground" />
-        SQL Ejecutado
-      </h4>
-      <div className="bg-card border border-border rounded-md p-3 overflow-x-auto">
-        <code className="text-primary text-xs font-mono whitespace-pre-wrap">
-          {sql}
-        </code>
-      </div>
-    </div>
-  );
-
-  const renderPendingConfirmation = () => (
-    <div className="space-y-3">
-      {renderSQLSection()}
-      
-      {affectedRecords && affectedRecords.length > 0 && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border">
-          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2 text-sm">
-            <Database className="w-3 h-3 text-muted-foreground" />
-            Registros que serán afectados ({affectedCount})
-          </h4>
-          <div className="bg-card rounded-md border border-border overflow-hidden">
-            <div className="max-h-32 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {Object.keys(affectedRecords[0]).map((header) => (
-                      <TableHead key={header} className="font-medium text-xs px-2 py-1">
-                        {header}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {affectedRecords.slice(0, 3).map((row, index) => (
-                    <TableRow key={index}>
-                      {Object.entries(row).map(([key, value], cellIndex) => (
-                        <TableCell key={cellIndex} className="text-xs px-2 py-1">
-                          {value !== null && value !== undefined ? (
-                            key.toLowerCase().includes('password') ? (
-                              <div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap" title={String(value)}>
-                                {String(value)}
-                              </div>
-                            ) : (
-                              String(value)
-                            )
-                          ) : '-'}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {affectedRecords.length > 3 && (
-                <div className="px-2 py-1 text-xs text-muted-foreground border-t text-center">
-                  ... y {affectedRecords.length - 3} registros más
+      <div className="mb-6">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-main-color)' }}>
+            <Database className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+              {/* Header */}
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: 'var(--techwave-error-color)' }}>
+                  <Database className="w-5 h-5 text-white" />
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {type === 'delete' && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-          <div className="flex items-start gap-2">
-            <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-            <div>
-              <h5 className="font-medium text-destructive text-sm">Advertencia</h5>
-              <p className="text-xs text-muted-foreground mt-1">
-                Esta acción eliminará permanentemente {affectedCount} registro(s). Esta operación no se puede deshacer.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!isCompleted && (
-        <div className="flex gap-2 justify-end">
-          <Button 
-            variant="outline" 
-            onClick={onCancel}
-            disabled={isConfirming}
-            className="px-4 py-1 text-xs"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant={type === 'delete' ? 'destructive' : 'default'}
-            onClick={onConfirm}
-            disabled={isConfirming}
-            className="px-4 py-1 text-xs"
-          >
-            {isConfirming ? (
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Procesando...
+                <div>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
+                    No hay conexiones de base de datos configuradas
+                  </h3>
+                  <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
+                    Para usar el asistente SQL, necesitas crear al menos una conexión
+                  </p>
+                </div>
               </div>
-            ) : (
-              'Aceptar Acción'
-            )}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
 
-  if (type === 'pending') {
-    return (
-      <div className="bg-card rounded-lg border border-border p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          {getTypeIcon()}
-          <div>
-            <h3 className="font-semibold text-foreground text-sm">{getTypeTitle()}</h3>
-            <p className="text-xs text-muted-foreground">{getTypeDescription()}</p>
+              {/* Pasos */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-3 flex items-center" style={{ color: 'var(--techwave-heading-color)' }}>
+                  <Settings className="w-4 h-4 mr-2" style={{ color: 'var(--techwave-main-color)' }} />
+                  Pasos para configurar:
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-start">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium mr-3" style={{ backgroundColor: 'var(--techwave-main-color)', color: 'white' }}>1</span>
+                    <span style={{ color: 'var(--techwave-body-color)' }}>Ve a <strong>Conexiones</strong> en el sidebar izquierdo</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium mr-3" style={{ backgroundColor: 'var(--techwave-main-color)', color: 'white' }}>2</span>
+                    <span style={{ color: 'var(--techwave-body-color)' }}>Haz clic en <strong>"Nueva Conexión"</strong></span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium mr-3" style={{ backgroundColor: 'var(--techwave-main-color)', color: 'white' }}>3</span>
+                    <span style={{ color: 'var(--techwave-body-color)' }}>Configura los datos de tu base de datos</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium mr-3" style={{ backgroundColor: 'var(--techwave-main-color)', color: 'white' }}>4</span>
+                    <span style={{ color: 'var(--techwave-body-color)' }}>Activa la conexión una vez configurada</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detalles de configuración */}
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                <h5 className="font-medium mb-2" style={{ color: 'var(--techwave-heading-color)' }}>Datos requeridos:</h5>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div style={{ color: 'var(--techwave-body-color)' }}>• Tipo de base de datos</div>
+                  <div style={{ color: 'var(--techwave-body-color)' }}>• Host y puerto</div>
+                  <div style={{ color: 'var(--techwave-body-color)' }}>• Nombre de la base de datos</div>
+                  <div style={{ color: 'var(--techwave-body-color)' }}>• Usuario y contraseña</div>
+                </div>
+              </div>
+
+              {/* Después de configurar */}
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                <h5 className="font-medium mb-2 flex items-center" style={{ color: 'var(--techwave-success-color)' }}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Después de configurar:
+                </h5>
+                <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
+                  Podrás hacer consultas SQL en lenguaje natural y el asistente te ayudará a generar consultas automáticamente.
+                </p>
+              </div>
+
+              {/* Acceso directo */}
+              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-main-color)' }}>
+                <div className="flex items-center">
+                  <Link className="w-4 h-4 mr-2 text-white" />
+                  <span className="text-white font-medium">Acceso directo a Conexiones</span>
+                </div>
+                <a 
+                  href="/connections" 
+                  className="flex items-center px-4 py-2 rounded-lg transition-all hover:scale-105"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                >
+                  <span className="mr-2">Ir a Conexiones</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-        {renderPendingConfirmation()}
       </div>
     );
   }
 
-  return (
-    <div className="bg-card rounded-lg border border-border p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        {getTypeIcon()}
-        <div>
-          <h3 className="font-semibold text-foreground text-sm">{getTypeTitle()}</h3>
-          <p className="text-xs text-muted-foreground">{getTypeDescription()}</p>
+  // Manejar respuestas con datos estructurados
+  if (message.responseData) {
+    const { type, sql, data, affectedRows, affectedRecords, affectedCount } = message.responseData;
+
+    if (type === 'select' && data && Array.isArray(data)) {
+      // Renderizar tabla para consultas SELECT
+      const columns = data.length > 0 ? Object.keys(data[0]) : [];
+      
+      return (
+        <div className="mb-6">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-main-color)' }}>
+              <Table className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+                {/* Header */}
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: 'var(--techwave-success-color)' }}>
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
+                      Consulta SELECT ejecutada exitosamente
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
+                      {data.length} registros encontrados
+                    </p>
+                  </div>
+                </div>
+
+                {/* SQL generado */}
+                <div className="mb-6">
+                  <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--techwave-heading-color)' }}>
+                    <FileText className="w-4 h-4 mr-2" style={{ color: 'var(--techwave-main-color)' }} />
+                    SQL generado:
+                  </h4>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                    <code className="text-sm" style={{ color: 'var(--techwave-main-color)' }}>{sql}</code>
+                  </div>
+                </div>
+
+                {/* Tabla de resultados */}
+                <div className="mb-4">
+                  <h4 className="font-medium mb-3" style={{ color: 'var(--techwave-heading-color)' }}>
+                    Resultados:
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse" style={{ border: '1px solid var(--techwave-border-color)' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                          {columns.map((column) => (
+                            <th 
+                              key={column}
+                              className="px-4 py-3 text-left text-sm font-medium border"
+                              style={{ borderColor: 'var(--techwave-border-color)', color: 'var(--techwave-heading-color)' }}
+                            >
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.map((row, rowIndex) => (
+                          <tr 
+                            key={rowIndex}
+                            style={{ 
+                              backgroundColor: rowIndex % 2 === 0 ? 'var(--techwave-some-r-bg-color)' : 'var(--techwave-some-a-bg-color)',
+                              borderColor: 'var(--techwave-border-color)'
+                            }}
+                          >
+                            {columns.map((column) => (
+                              <td 
+                                key={column}
+                                className="px-4 py-3 text-sm border"
+                                style={{ 
+                                  borderColor: 'var(--techwave-border-color)', 
+                                  color: 'var(--techwave-body-color)' 
+                                }}
+                              >
+                                {row[column] !== null && row[column] !== undefined ? String(row[column]) : '-'}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'pending') {
+      // Renderizar confirmación para UPDATE/DELETE
+      return (
+        <div className="mb-6">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-warning-color)' }}>
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+                {/* Header */}
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: 'var(--techwave-warning-color)' }}>
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
+                      Consulta {type.toUpperCase()} que requiere confirmación
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
+                      {affectedCount} registros se verán afectados
+                    </p>
+                  </div>
+                </div>
+
+                {/* SQL generado */}
+                <div className="mb-6">
+                  <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--techwave-heading-color)' }}>
+                    <FileText className="w-4 h-4 mr-2" style={{ color: 'var(--techwave-main-color)' }} />
+                    SQL generado:
+                  </h4>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                    <code className="text-sm" style={{ color: 'var(--techwave-main-color)' }}>{sql}</code>
+                  </div>
+                </div>
+
+                {/* Registros afectados */}
+                {affectedRecords && affectedRecords.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-medium mb-3" style={{ color: 'var(--techwave-heading-color)' }}>
+                      Registros que se verán afectados:
+                    </h4>
+                    <div className="space-y-2">
+                      {affectedRecords.map((record, index) => (
+                        <div 
+                          key={index}
+                          className="p-3 rounded-lg text-sm"
+                          style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}
+                        >
+                          <span className="font-medium" style={{ color: 'var(--techwave-heading-color)' }}>
+                            {index + 1}.
+                          </span>
+                          <span className="ml-2" style={{ color: 'var(--techwave-body-color)' }}>
+                            {JSON.stringify(record, null, 2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Instrucciones */}
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-main-color)' }}>
+                  <div className="text-white text-center">
+                    <p className="font-medium mb-2">Para confirmar:</p>
+                    <p className="text-sm mb-3">Escribe "sí", "confirmar" o "aceptar"</p>
+                    <p className="font-medium mb-2">Para cancelar:</p>
+                    <p className="text-sm">Escribe "no" o "cancelar"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Para otras consultas (INSERT, UPDATE, DELETE)
+    return (
+      <div className="mb-6">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-success-color)' }}>
+            <CheckCircle2 className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+              {/* Header */}
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: 'var(--techwave-success-color)' }}>
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>
+                    Consulta {type.toUpperCase()} ejecutada exitosamente
+                  </h3>
+                  <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
+                    {affectedRows || 0} filas afectadas
+                  </p>
+                </div>
+              </div>
+
+              {/* SQL generado */}
+              <div className="mb-4">
+                <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--techwave-heading-color)' }}>
+                  <FileText className="w-4 h-4 mr-2" style={{ color: 'var(--techwave-main-color)' }} />
+                  SQL ejecutado:
+                </h4>
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                  <code className="text-sm" style={{ color: 'var(--techwave-main-color)' }}>{sql}</code>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {renderSQLSection()}
-      
-      {(type === 'select' || type === 'insert') && (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border">
-          <h4 className="font-medium text-foreground mb-2 flex items-center gap-2 text-sm">
-            <Database className="w-3 h-3 text-muted-foreground" />
-            {type === 'select' ? 'Resultados' : 'Tabla actualizada'}
-          </h4>
-          {renderDataTable()}
+    );
+  }
+
+  // Renderizado normal para mensajes del bot
+  if (message.author === 'bot') {
+    return (
+      <div className="mb-6">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-main-color)' }}>
+            <Database className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+              <div className="prose prose-sm max-w-none" style={{ color: 'var(--techwave-body-color)' }}>
+                {message.content}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Renderizado para mensajes del usuario
+  return (
+    <div className="mb-6">
+      <div className="flex items-start space-x-3 justify-end">
+        <div className="flex-1 min-w-0 text-right">
+          <div className="rounded-lg p-4 inline-block" style={{ backgroundColor: 'var(--techwave-main-color)', color: 'white' }}>
+            <div className="prose prose-sm max-w-none text-white">
+              {message.content}
+            </div>
+          </div>
+        </div>
+        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--techwave-heading-color)' }}>
+            {message.author === 'user' ? 'U' : 'B'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 } 

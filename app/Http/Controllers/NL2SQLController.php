@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Connection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Mcp\NL2SQLTool;
 use App\Mcp\ExecutorTool;
@@ -21,14 +22,52 @@ class NL2SQLController extends Controller
 
     public function store(Request $request, NL2SQLTool $nl2sql, ExecutorTool $executor)
     {
+        // Debug logs de autenticación
+        \Log::info('=== AUTENTICACIÓN DEBUG ===');
+        \Log::info('Auth::check(): ' . (Auth::check() ? 'true' : 'false'));
+        \Log::info('Auth::id(): ' . Auth::id());
+        \Log::info('Auth::user(): ' . (Auth::user() ? 'Usuario encontrado' : 'Usuario NULL'));
+        \Log::info('Session ID: ' . $request->session()->getId());
+        \Log::info('Request headers: ' . json_encode($request->headers->all()));
+        \Log::info('Request cookies: ' . json_encode($request->cookies->all()));
+        
+        // Verificación de seguridad
+        if (!Auth::check() || !Auth::user()) {
+            \Log::error('Usuario no autenticado en NL2SQL store');
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Usuario no autenticado'], 401);
+            }
+            return back()->with('error', 'Usuario no autenticado');
+        }
+        
         $request->validate([
             'query' => 'required|string|max:255',
+        ]);
+
+        // Debug logs
+        \Log::info('NL2SQL store method called', [
+            'user_id' => Auth::id(),
+            'user_authenticated' => Auth::check(),
+            'request_data' => $request->all()
         ]);
 
         // Get the active connection for the authenticated user
         $connection = Connection::getActiveForUser(Auth::id());
         
+        \Log::info('Active connection result', [
+            'connection' => $connection,
+            'connection_id' => $connection ? $connection->id : null,
+            'connection_name' => $connection ? $connection->name : null,
+            'is_active' => $connection ? $connection->is_active : null
+        ]);
+        
         if (!$connection) {
+            \Log::error('No active connection found for user', [
+                'user_id' => Auth::id(),
+                'total_connections' => Auth::user()->connections()->count(),
+                'all_connections' => Auth::user()->connections()->get(['id', 'name', 'is_active'])
+            ]);
+            
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'No tienes una conexión activa. Por favor, crea y activa una conexión primero.'], 400);
             }
