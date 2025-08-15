@@ -108,7 +108,8 @@ export default function ChatResponse({ message }: ChatResponseProps) {
 
     if (type === 'select' && data && Array.isArray(data)) {
       // Renderizar tabla para consultas SELECT
-      const columns = data.length > 0 ? Object.keys(data[0]) : [];
+      const tableData = data;
+      const columns = tableData.length > 0 ? Object.keys(tableData[0]) : [];
       
       return (
         <div className="mb-6">
@@ -128,7 +129,7 @@ export default function ChatResponse({ message }: ChatResponseProps) {
                       Consulta SELECT ejecutada exitosamente
                     </h3>
                     <p className="text-sm" style={{ color: 'var(--techwave-body-color)' }}>
-                      {data.length} registros encontrados
+                      {tableData.length} registros encontrados
                     </p>
                   </div>
                 </div>
@@ -165,7 +166,7 @@ export default function ChatResponse({ message }: ChatResponseProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {data.map((row, rowIndex) => (
+                        {tableData.map((row, rowIndex) => (
                           <tr 
                             key={rowIndex}
                             style={{ 

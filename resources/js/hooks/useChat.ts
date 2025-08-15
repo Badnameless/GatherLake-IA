@@ -1,91 +1,81 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChatMessage, ChatSession, UserInfo, ChatData } from '../types/chat';
-import { router } from '@inertiajs/react';
 import axios from 'axios';
+import { ChatMessage, ChatSession, UserInfo, ChatData } from '../types/chat';
 
-// Default user info structure - will be populated from API
-const defaultUserInfo: UserInfo = {
-  id: '',
-  name: '',
-  email: '',
+// Mock data - In real app, this would come from API
+const mockUserInfo: UserInfo = {
+  id: '1',
+  name: 'Caden Smith',
+  email: 'cadmail@gmail.com',
   avatar: './images/avatar.jpg',
   plan: 'Free',
-  tokensRemaining: 0,
-  tokensResetTime: '24 hours',
+  tokensRemaining: 120,
+  tokensResetTime: '19 hours',
   dailyTokenLimit: 200
 };
 
+// Mock sessions for development
 const mockSessions: ChatSession[] = [
   {
     id: '1',
-    title: 'SQL Assistant',
+    title: 'Chat SQL Principal',
     messages: [
       {
         id: '1',
         content: 'Hola! Soy tu asistente SQL. Puedes preguntarme en lenguaje natural y te ayudaré a generar consultas SQL. ¿En qué puedo ayudarte?',
         author: 'bot',
-        timestamp: '2025-01-28T10:00:00Z'
+        timestamp: new Date().toISOString()
       }
     ],
-    createdAt: '2025-01-28T10:00:00Z',
-    updatedAt: '2025-01-28T10:01:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     isActive: true
   }
 ];
 
-export const useChat = () => {
+export function useChat() {
   const [chatData, setChatData] = useState<ChatData>({
     currentSession: null,
     sessions: [],
-    userInfo: defaultUserInfo,
+    userInfo: mockUserInfo,
     isLoading: true,
     error: null
   });
 
-  const [newMessage, setNewMessage] = useState('');
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState<string>('');
-  const [showActionModal, setShowActionModal] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState<string>('');
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [activeConnection, setActiveConnection] = useState<unknown>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     sql: string;
     type: 'update' | 'delete';
-    affectedRecords: unknown[];
+    affectedRecords: Record<string, unknown>[];
     affectedCount: number;
   } | null>(null);
+
+  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+  const [showActionModal, setShowActionModal] = useState<string | null>(null);
 
   // Load initial data and active connection
   useEffect(() => {
     const loadChatData = async () => {
       try {
-        // Always try to get user info from API
-        const userResponse = await axios.get('/api/user/current');
-        const userData = userResponse.data;
-        
-        const userInfo: UserInfo = {
-          id: userData.user.id.toString(),
-          name: userData.user.name,
-          email: userData.user.email,
-          avatar: './images/avatar.jpg', // Default avatar path
-          plan: userData.plan,
-          tokensRemaining: userData.tokensRemaining,
-          tokensResetTime: userData.tokensResetTime,
-          dailyTokenLimit: userData.dailyTokenLimit
-        };
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         const currentSession = mockSessions.find(session => session.isActive) || null;
         
         setChatData({
           currentSession,
           sessions: mockSessions,
-          userInfo: userInfo,
+          userInfo: mockUserInfo,
           isLoading: false,
           error: null
         });
 
-        // Obtener la conexión activa de forma segura
+        // Get active connection
         try {
           console.log('Intentando obtener conexión activa...');
           const response = await axios.get('/api/connections/active');
@@ -100,68 +90,51 @@ export const useChat = () => {
             console.log('No hay conexión activa en la respuesta');
             setActiveConnection(null);
           }
-        } catch (connectionError) {
-          console.error('Error obteniendo conexión activa:', connectionError);
-          if (axios.isAxiosError(connectionError)) {
-            console.error('Error de Axios:', connectionError.response?.data);
-            console.error('Status:', connectionError.response?.status);
-            console.error('Headers:', connectionError.response?.headers);
+        } catch (error) {
+          console.error('Error obteniendo conexión activa:', error);
+          if (axios.isAxiosError(error)) {
+            console.error('Error de Axios:', error.response?.data);
+            console.error('Status:', error.response?.status);
+            console.error('Headers:', error.response?.headers);
           }
           setActiveConnection(null);
         }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        // Set error state instead of fallback to mock data
-        setChatData({
-          currentSession: null,
-          sessions: [],
-          userInfo: defaultUserInfo,
+      } catch {
+        setChatData(prev => ({
+          ...prev,
           isLoading: false,
-          error: 'Error al cargar datos del usuario'
-        });
+          error: 'Failed to load chat data'
+        }));
       }
     };
 
     loadChatData();
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showActionModal) {
-        const target = event.target as Element;
-        if (!target.closest('.options')) {
-          setShowActionModal(null);
-        }
-      }
-      
-      if (showProfileModal) {
-        const target = event.target as Element;
-        if (!target.closest('.Header__actions--avatar-container')) {
-          setShowProfileModal(false);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showActionModal, showProfileModal]);
-
-  // Toggle profile modal
-  const toggleProfileModal = useCallback(() => {
-    setShowProfileModal(prev => !prev);
-  }, []);
-
-  // Handle logout
-  const handleLogout = useCallback(() => {
-    router.post('/logout');
-  }, []);
-
   // Send message with NL2SQL functionality
   const sendMessage = useCallback(async (message: string) => {
     if (!message.trim()) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: message,
+      author: 'user',
+      timestamp: new Date().toISOString()
+    };
+
+    setChatData(prev => {
+      if (!prev.currentSession) return prev;
+      return {
+        ...prev,
+        currentSession: {
+          ...prev.currentSession,
+          messages: [...prev.currentSession.messages, userMessage]
+        }
+      };
+    });
+
+    setNewMessage('');
+    setIsProcessing(true);
 
     // Verificar si hay conexiones activas
     if (!activeConnection) {
@@ -197,40 +170,14 @@ Podrás hacer consultas SQL en lenguaje natural y el asistente te ayudará a gen
           ...prev,
           currentSession: {
             ...prev.currentSession,
-            messages: [...prev.currentSession.messages, {
-              id: (Date.now() - 1).toString(),
-              content: message,
-              author: 'user',
-              timestamp: new Date().toISOString()
-            }, noConnectionMessage]
+            messages: [...prev.currentSession.messages, noConnectionMessage]
           }
         };
       });
 
-      setNewMessage('');
+      setIsProcessing(false);
       return;
     }
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: message,
-      author: 'user',
-      timestamp: new Date().toISOString()
-    };
-
-    setChatData(prev => {
-      if (!prev.currentSession) return prev;
-      return {
-        ...prev,
-        currentSession: {
-          ...prev.currentSession,
-          messages: [...prev.currentSession.messages, userMessage]
-        }
-      };
-    });
-
-    setNewMessage('');
-    setIsProcessing(true);
 
     try {
       // Check if we have a pending confirmation
@@ -557,6 +504,11 @@ La consulta se ejecutó sin problemas.`,
     setShowActionModal(sessionId);
   }, []);
 
+  // Hide action modal
+  const hideSessionActions = useCallback(() => {
+    setShowActionModal(null);
+  }, []);
+
   // Start editing session title
   const startEditingSession = useCallback((sessionId: string) => {
     const session = chatData.sessions.find(s => s.id === sessionId);
@@ -582,7 +534,7 @@ La consulta se ejecutó sin problemas.`,
 
   const handleConfirmAction = useCallback(async () => {
     if (!pendingConfirmation) return;
-
+    
     setIsProcessing(true);
     try {
       const response = await axios.post('/api/nl2sql/confirm', {
@@ -595,12 +547,9 @@ La consulta se ejecutó sin problemas.`,
         }
       });
 
-      console.log('Confirmation response:', response.data);
-
-      let botResponse: ChatMessage;
       if (response.data.result) {
         const result = response.data.result;
-        botResponse = {
+        const botResponse: ChatMessage = {
           id: (Date.now() + 1).toString(),
           content: `Consulta ${result.type.toUpperCase()} confirmada y ejecutada`,
           author: 'bot',
@@ -612,26 +561,21 @@ La consulta se ejecutó sin problemas.`,
             affectedRows: result.affected_rows
           }
         };
-      } else {
-        botResponse = {
-          id: (Date.now() + 1).toString(),
-          content: 'Consulta confirmada y ejecutada exitosamente.',
-          author: 'bot',
-          timestamp: new Date().toISOString()
-        };
+
+        setChatData(prev => {
+          if (!prev.currentSession) return prev;
+          return {
+            ...prev,
+            currentSession: {
+              ...prev.currentSession,
+              messages: [...prev.currentSession.messages, botResponse]
+            }
+          };
+        });
       }
-
-      setChatData(prev => {
-        if (!prev.currentSession) return prev;
-        return {
-          ...prev,
-          currentSession: {
-            ...prev.currentSession,
-            messages: [...prev.currentSession.messages, botResponse]
-          }
-        };
-      });
-
+      
+      // Mark the pending confirmation as completed
+      setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
       setPendingConfirmation(null);
     } catch (error: unknown) {
       console.error('Error confirming action:', error);
@@ -662,7 +606,7 @@ La consulta se ejecutó sin problemas.`,
 
   const handleCancelAction = useCallback(() => {
     if (!pendingConfirmation) return;
-
+    
     const botResponse: ChatMessage = {
       id: (Date.now() + 1).toString(),
       content: 'Consulta cancelada exitosamente. La operación no se ejecutó.',
@@ -681,6 +625,8 @@ La consulta se ejecutó sin problemas.`,
       };
     });
 
+    // Mark the pending confirmation as completed
+    setCompletedActions(prev => new Set(prev).add(pendingConfirmation.sql));
     setPendingConfirmation(null);
   }, [pendingConfirmation]);
 
@@ -688,23 +634,25 @@ La consulta se ejecutó sin problemas.`,
     chatData,
     newMessage,
     setNewMessage,
-    editingSessionId,
-    editingTitle,
-    setEditingTitle,
-    showActionModal,
-    showProfileModal,
-    isProcessing,
     sendMessage,
+    isProcessing,
+    pendingConfirmation,
+    handleConfirmAction,
+    handleCancelAction,
+    completedActions,
+    showProfileModal,
+    setShowProfileModal,
     createNewSession,
     switchSession,
+    updateSessionTitle,
     deleteSession,
     showSessionActions,
+    hideSessionActions,
     startEditingSession,
-    cancelEditingSession,
     saveSessionTitle,
-    toggleProfileModal,
-    handleLogout,
-    handleConfirmAction,
-    handleCancelAction
+    cancelEditingSession,
+    editingSessionId,
+    editingTitle,
+    showActionModal
   };
-};
+}
