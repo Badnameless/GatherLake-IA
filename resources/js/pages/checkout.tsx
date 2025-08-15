@@ -181,56 +181,56 @@ export default function Checkout() {
       <Head title={`Checkout - ${plan.name} Plan`} />
       
       <FrontendLayout userInfo={userInfo} activePage="checkout" onLogout={handleLogout}>
-        {/* Back to Pricing Link */}
-        <div style={{ marginBottom: '2rem' }}>
-          <Link 
-            href="/pricing"
-            className="inline-flex items-center transition-colors"
-            style={{ color: 'var(--techwave-body-color)' }}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver a Pricing
-          </Link>
-        </div>
+            {/* Back to Pricing Link */}
+            <div style={{ marginBottom: '2rem' }}>
+              <Link 
+                href="/pricing"
+                className="inline-flex items-center transition-colors"
+                style={{ color: 'var(--techwave-body-color)' }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a Pricing
+              </Link>
+            </div>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {step === 'checkout' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              {/* Order Summary */}
-              <div className="rounded-2xl p-8" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--techwave-heading-color)' }}>Resumen del Pedido</h2>
-                
-                <div className="rounded-xl p-6 mb-6" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>{plan.name} Plan</h3>
-                    <span className="text-2xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
-                  </div>
-                  <p className="text-sm mb-4" style={{ color: 'var(--techwave-body-color)' }}>Facturación mensual</p>
-                  
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start">
-                        <CheckCircle className="h-4 w-4 mr-3 mt-0.5 flex-shrink-0" style={{ color: 'var(--techwave-heading-color)' }} />
-                        <span className="text-sm" style={{ color: 'var(--techwave-heading-color)' }}>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              {step === 'checkout' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                  {/* Order Summary */}
+                  <div className="rounded-2xl p-8" style={{ backgroundColor: 'var(--techwave-some-r-bg-color)', border: '1px solid var(--techwave-border-color)' }}>
+                    <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--techwave-heading-color)' }}>Resumen del Pedido</h2>
+                    
+                    <div className="rounded-xl p-6 mb-6" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)' }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold" style={{ color: 'var(--techwave-heading-color)' }}>{plan.name} Plan</h3>
+                        <span className="text-2xl font-bold" style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
+                      </div>
+                      <p className="text-sm mb-4" style={{ color: 'var(--techwave-body-color)' }}>Facturación mensual</p>
+                      
+                      <ul className="space-y-3">
+                        {plan.features.map((feature, index) => (
+                          <li key={index} className="flex items-start">
+                            <CheckCircle className="h-4 w-4 mr-3 mt-0.5 flex-shrink-0" style={{ color: 'var(--techwave-heading-color)' }} />
+                            <span className="text-sm" style={{ color: 'var(--techwave-heading-color)' }}>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
-                <div className="pt-6" style={{ borderTop: '1px solid var(--techwave-border-color)' }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span style={{ color: 'var(--techwave-body-color)' }}>Subtotal</span>
-                    <span style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span style={{ color: 'var(--techwave-body-color)' }}>Impuestos</span>
-                    <span style={{ color: 'var(--techwave-heading-color)' }}>$0.00</span>
-                  </div>
-                  <div className="flex items-center justify-between text-lg font-semibold">
-                    <span style={{ color: 'var(--techwave-heading-color)' }}>Total</span>
-                    <span style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
-                  </div>
-                </div>
+                    <div className="pt-6" style={{ borderTop: '1px solid var(--techwave-border-color)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span style={{ color: 'var(--techwave-body-color)' }}>Subtotal</span>
+                        <span style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span style={{ color: 'var(--techwave-body-color)' }}>Impuestos</span>
+                        <span style={{ color: 'var(--techwave-heading-color)' }}>$0.00</span>
+                      </div>
+                      <div className="flex items-center justify-between text-lg font-semibold">
+                        <span style={{ color: 'var(--techwave-heading-color)' }}>Total</span>
+                        <span style={{ color: 'var(--techwave-heading-color)' }}>${plan.price}</span>
+                      </div>
+                    </div>
 
                 {/* Security Badges */}
                 <div className="mt-8 pt-6" style={{ borderTop: '1px solid var(--techwave-border-color)' }}>
@@ -287,11 +287,11 @@ export default function Checkout() {
                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
                           errors.cardNumber ? 'border-red-500' : ''
                         }`}
-                        style={{
-                          backgroundColor: 'var(--techwave-some-a-bg-color)',
-                          borderColor: errors.cardNumber ? '#ef4444' : 'var(--techwave-border-color)',
+                                              style={{
+                        backgroundColor: 'var(--techwave-some-a-bg-color)',
+                        borderColor: errors.cardNumber ? '#ef4444' : 'var(--techwave-border-color)',
                           color: 'var(--techwave-heading-color)'
-                        }}
+                      }}
                         maxLength={19}
                       />
                     </div>
@@ -311,11 +311,11 @@ export default function Checkout() {
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
                           errors.cardHolder ? 'border-red-500' : ''
                         }`}
-                        style={{
-                          backgroundColor: 'var(--techwave-some-a-bg-color)',
-                          borderColor: errors.cardHolder ? '#ef4444' : 'var(--techwave-border-color)',
+                                              style={{
+                        backgroundColor: 'var(--techwave-some-a-bg-color)',
+                        borderColor: errors.cardHolder ? '#ef4444' : 'var(--techwave-border-color)',
                           color: 'var(--techwave-heading-color)'
-                        }}
+                      }}
                       />
                       {errors.cardHolder && <p className="text-sm text-red-400 mt-1">{errors.cardHolder}</p>}
                     </div>
@@ -332,11 +332,11 @@ export default function Checkout() {
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
                           errors.expiryDate ? 'border-red-500' : ''
                         }`}
-                        style={{
-                          backgroundColor: 'var(--techwave-some-a-bg-color)',
-                          borderColor: errors.expiryDate ? '#ef4444' : 'var(--techwave-border-color)',
+                                              style={{
+                        backgroundColor: 'var(--techwave-some-a-bg-color)',
+                        borderColor: errors.expiryDate ? '#ef4444' : 'var(--techwave-border-color)',
                           color: 'var(--techwave-heading-color)'
-                        }}
+                      }}
                         maxLength={5}
                       />
                       {errors.expiryDate && <p className="text-sm text-red-400 mt-1">{errors.expiryDate}</p>}
@@ -383,7 +383,7 @@ export default function Checkout() {
 
           {step === 'processing' && (
             <div className="text-center py-24">
-              <Loader2 className="h-16 w-16 animate-spin mx-auto mb-6" style={{ color: 'var(--techwave-heading-color)' }} />
+                              <Loader2 className="h-16 w-16 animate-spin mx-auto mb-6" style={{ color: 'var(--techwave-heading-color)' }} />
               <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--techwave-heading-color)' }}>Procesando pago...</h2>
               <p className="max-w-md mx-auto" style={{ color: 'var(--techwave-body-color)' }}>
                 Por favor espera mientras procesamos tu pago de forma segura. 
@@ -408,7 +408,7 @@ export default function Checkout() {
               </div>
             </div>
           )}
-        </div>
+            </div>
       </FrontendLayout>
     </>
   );

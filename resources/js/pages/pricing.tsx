@@ -98,104 +98,104 @@ export default function Pricing() {
       <Head title="Pricing - GatherLake AI" />
       
       <FrontendLayout userInfo={userInfo} activePage="pricing" onLogout={handleLogout}>
-        {/* Pricing Header */}
-        <div className="relative overflow-hidden" style={{ backgroundColor: 'var(--techwave-header-bg-color)', marginBottom: '2rem' }}>
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(270deg, var(--techwave-main-color1), var(--techwave-main-color2), var(--techwave-main-color1), var(--techwave-main-color2))', opacity: '0.1' }}></div>
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6" style={{ color: 'var(--techwave-heading-color)' }}>
-                Elige tu plan
-              </h1>
-              <p className="text-xl max-w-3xl mx-auto" style={{ color: 'var(--techwave-body-color)' }}>
-                Encuentra el plan perfecto para potenciar tu productividad con IA. 
-                Desde principiantes hasta equipos empresariales.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pricing Cards */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 mt-[100px]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
-                  plan.popular
-                    ? 'border-2'
-                    : 'border'
-                }`}
-                style={{
-                  backgroundColor: plan.popular ? 'var(--techwave-some-a-bg-color)' : 'var(--techwave-some-r-bg-color)',
-                  borderColor: plan.popular ? 'var(--techwave-border-color)' : 'var(--techwave-border-color)',
-                  color: 'var(--techwave-heading-color)'
-                }}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="px-4 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)', color: 'var(--techwave-heading-color)', border: '1px solid var(--techwave-border-color)' }}>
-                      Más Popular
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{
-                    backgroundColor: plan.popular ? 'var(--techwave-site-bg-color)' : 'var(--techwave-some-a-bg-color)',
-                    color: 'var(--techwave-heading-color)',
-                    border: plan.popular ? '2px solid var(--techwave-border-color)' : 'none'
-                  }}>
-                    {plan.icon}
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <p className="text-sm mb-4" style={{ opacity: 0.8 }}>{plan.description}</p>
-                  
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-sm ml-1" style={{ opacity: 0.8 }}>{plan.period}</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start">
-                      <Check className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" style={{ color: 'var(--techwave-heading-color)' }} />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
+            {/* Pricing Header */}
+            <div className="relative overflow-hidden" style={{ backgroundColor: 'var(--techwave-header-bg-color)', marginBottom: '2rem' }}>
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(270deg, var(--techwave-main-color1), var(--techwave-main-color2), var(--techwave-main-color1), var(--techwave-main-color2))', opacity: '0.1' }}></div>
+              <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
                 <div className="text-center">
-                  {plan.name === 'Free' ? (
-                    <button
-                      className="w-full px-6 py-3 rounded-lg cursor-not-allowed"
-                      style={{
-                        border: '1px solid var(--techwave-border-color)',
-                        color: 'var(--techwave-body-color)',
-                        backgroundColor: 'var(--techwave-some-r-bg-color)'
-                      }}
-                      disabled
-                    >
-                      {plan.buttonText}
-                    </button>
-                  ) : (
-                    <Link
-                      href={`/checkout?plan=${plan.name.toLowerCase()}`}
-                      className="inline-block w-full px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105"
-                      style={{
-                        backgroundColor: 'var(--techwave-site-bg-color)',
-                        color: 'var(--techwave-heading-color)',
-                        border: '2px solid var(--techwave-border-color)',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                      }}
-                    >
-                      {plan.buttonText}
-                    </Link>
-                  )}
+                  <h1 className="text-4xl md:text-6xl font-bold mb-6" style={{ color: 'var(--techwave-heading-color)' }}>
+                    Elige tu plan
+                  </h1>
+                  <p className="text-xl max-w-3xl mx-auto" style={{ color: 'var(--techwave-body-color)' }}>
+                    Encuentra el plan perfecto para potenciar tu productividad con IA. 
+                    Desde principiantes hasta equipos empresariales.
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* Pricing Cards */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 mt-[100px]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+            {plans.map((plan) => (
+                  <div
+                    key={plan.name}
+                    className={`relative rounded-2xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
+                      plan.popular
+                        ? 'border-2'
+                        : 'border'
+                    }`}
+                    style={{
+                      backgroundColor: plan.popular ? 'var(--techwave-some-a-bg-color)' : 'var(--techwave-some-r-bg-color)',
+                      borderColor: plan.popular ? 'var(--techwave-border-color)' : 'var(--techwave-border-color)',
+                      color: 'var(--techwave-heading-color)'
+                    }}
+                  >
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <span className="px-4 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: 'var(--techwave-some-a-bg-color)', color: 'var(--techwave-heading-color)', border: '1px solid var(--techwave-border-color)' }}>
+                          Más Popular
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="text-center mb-8">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{
+                        backgroundColor: plan.popular ? 'var(--techwave-site-bg-color)' : 'var(--techwave-some-a-bg-color)',
+                        color: 'var(--techwave-heading-color)',
+                        border: plan.popular ? '2px solid var(--techwave-border-color)' : 'none'
+                      }}>
+                        {plan.icon}
+                      </div>
+                      <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                      <p className="text-sm mb-4" style={{ opacity: 0.8 }}>{plan.description}</p>
+                      
+                      <div className="mb-6">
+                        <span className="text-4xl font-bold">{plan.price}</span>
+                        <span className="text-sm ml-1" style={{ opacity: 0.8 }}>{plan.period}</span>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-4 mb-8">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start">
+                          <Check className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" style={{ color: 'var(--techwave-heading-color)' }} />
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="text-center">
+                      {plan.name === 'Free' ? (
+                        <button
+                          className="w-full px-6 py-3 rounded-lg cursor-not-allowed"
+                          style={{
+                            border: '1px solid var(--techwave-border-color)',
+                            color: 'var(--techwave-body-color)',
+                            backgroundColor: 'var(--techwave-some-r-bg-color)'
+                          }}
+                          disabled
+                        >
+                          {plan.buttonText}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/checkout?plan=${plan.name.toLowerCase()}`}
+                          className="inline-block w-full px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105"
+                          style={{
+                            backgroundColor: 'var(--techwave-site-bg-color)',
+                            color: 'var(--techwave-heading-color)',
+                            border: '2px solid var(--techwave-border-color)',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                          }}
+                        >
+                          {plan.buttonText}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
           {/* FAQ Section */}
           <div className="mt-24">
@@ -281,7 +281,7 @@ export default function Pricing() {
               </div>
             </div>
           </div>
-        </div>
+            </div>
       </FrontendLayout>
     </>
   );
